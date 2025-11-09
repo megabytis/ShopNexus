@@ -1,15 +1,20 @@
 require("dotenv").config();
 
 const express = require("express");
+const cookieparser = require("cookie-parser");
 
 const { connectDB } = require("./config/database");
+
 const authRouter = require("./routers/auth");
+const categoriesRouter = require("./routers/categories");
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieparser());
 
 app.use("/", authRouter);
+app.use("/", categoriesRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
