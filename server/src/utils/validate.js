@@ -29,6 +29,13 @@ const validateSignupData = (req) => {
   }
 };
 
+const validateNewCategoriesData = (req) => {
+  if (!req.name) {
+    throw new Error("Invalid Category name");
+  }
+};
+
 module.exports = {
   validateSignupData,
+  validateNewCategoriesData,
 };
