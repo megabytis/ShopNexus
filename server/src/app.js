@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 
 const { connectDB } = require("./config/database");
-const authRouter = require("./routers/authRouter");
+const authRouter = require("./routers/auth");
 
 const app = express();
 
