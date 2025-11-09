@@ -1,0 +1,57 @@
+const mongoose = require("mongoose");
+const validator = require("validator");
+
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    minLength: 1,
+    maxLength: 30,
+  },
+  email: {
+    type: String,
+    unique: true,
+    required: true,
+    lowercase: true,
+    trim: true,
+    valiate(mail) {
+      if (!validator.isEmail(mail)) {
+        throw new Error(`Email Not Valid ${email}`);
+      }
+    },
+  },
+  password: {
+    type: String,
+    unique: true,
+    required: true,
+    validate(pass) {
+      if (!validator.isStrongPassword(pass)) {
+        throw new Error(`Not a Strong Password: ${pass}`);
+      }
+    },
+  },
+  role: {
+    type: String,
+    required: true,
+  },
+  cart: [
+    {
+      productId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Product",
+      },
+      quantity: {
+        type: Number,
+        min: 1,
+        default: 1,
+      },
+    },
+  ],
+});
+
+const userModel = mongoose.model("user", userSchema);
+
+module.exports = {
+  userModel,
+};
