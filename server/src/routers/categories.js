@@ -7,7 +7,6 @@ const {
   validateNewCategoriesData,
   validateMongoID,
 } = require("../utils/validate");
-const { json } = require("stream/consumers");
 
 const categoriesRouter = express.Router();
 
