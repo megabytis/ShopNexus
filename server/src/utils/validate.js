@@ -44,8 +44,26 @@ const validateMongoID = (id) => {
   }
 };
 
+const validateProductsData = (req) => {
+  const { title, description, price, stock, image, category } = req.body;
+  if (!title) {
+    throw new Error("Invalid Title!");
+  } else if (!description) {
+    throw new Error("Invalid Description!");
+  } else if (!validator.isNumeric(price) || !price) {
+    throw new Error("Invalid Price!");
+  } else if (!validator.isNumeric(stock)) {
+    throw new Error("Invalid Stock!");
+  } else if (!validator.isURL(image)) {
+    throw new Error("Invalid Image URL!");
+  } else if (!validator.isMongoId(category)) {
+    throw new Error("Invalid MongoID!");
+  }
+};
+
 module.exports = {
   validateSignupData,
   validateNewCategoriesData,
   validateMongoID,
+  validateProductsData,
 };
