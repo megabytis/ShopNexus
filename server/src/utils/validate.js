@@ -30,12 +30,22 @@ const validateSignupData = (req) => {
 };
 
 const validateNewCategoriesData = (req) => {
-  if (!req.name) {
+  const { name } = req.body;
+  if (!name || name.toString().length < 2) {
     throw new Error("Invalid Category name");
+  }
+};
+
+const validateMongoID = (id) => {
+  if (!id) {
+    throw new Error("Invalid MongoID!");
+  } else if (!validator.isMongoId(id.toString())) {
+    throw new Error("Invalid MongoID!");
   }
 };
 
 module.exports = {
   validateSignupData,
   validateNewCategoriesData,
+  validateMongoID,
 };
