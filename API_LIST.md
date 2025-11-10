@@ -13,7 +13,7 @@ DELETE /categories/:id (admin)
 
 # Products
 
-- producst rely on categories
+- products rely on categories
 
 POST /products
 GET /products
