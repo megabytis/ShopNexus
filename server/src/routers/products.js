@@ -50,7 +50,30 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
   }
 });
 
-productsRouter.get("/products", userAuth, async (req, res, next) => {
+productsRouter.get("/products", async (req, res, next) => {
+  try {
+    const allProducts = await productModel
+      .find()
+      .select("title description price stock image category")
+      .populate("category");
+
+    res.json({
+      messege: "List of all products!",
+      count: allProducts.length,
+      products: allProducts,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+/*
+What GET /products have :-
+- finding all products and selecting specific categories to show 
+- populating category, cuz product have taken reference of category, so it will populate about it's specified category in detail
+- in response it will show also total number of products listed along with product details and a sweet messege :) 
+*/
+
+productsRouter.get("/products/:id", async (req, res, next) => {
   //
 });
 
