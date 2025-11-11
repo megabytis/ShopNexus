@@ -15,7 +15,7 @@ DELETE /categories/:id (admin)
 
 - products rely on categories
 
-POST /products
+POST /products (admin)
 GET /products
 GET /products/:id
 PUT /products/:id (admin)

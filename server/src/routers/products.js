@@ -3,6 +3,7 @@ const express = require("express");
 const { userAuth } = require("../middleware/Auth");
 const { validateProductsData } = require("../utils/validate");
 const { productModel } = require("../models/product");
+const { categoriesModel } = require("../models/category");
 
 const productsRouter = express.Router();
 
@@ -12,10 +13,21 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
 
     validateProductsData(req);
 
-    const isSameTitleAvailable = await productModel.find({ title: title });
+    const isAdmin = req.user.role === "admin" ? true : false;
+    if (!isAdmin) {
+      throw new Error("You aren't Authorized to add products!");
+    }
+
+    const isSameTitleAvailable = await productModel.findOne({ title: title });
 
     if (isSameTitleAvailable) {
       throw new Error("Duplicate Title not Allowed!");
+    }
+
+    const isValidCategory = await categoriesModel.findOne({ _id: category });
+
+    if (!isValidCategory) {
+      throw new Error("Invalid Category!");
     }
 
     const products = new productModel({
@@ -36,6 +48,10 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+productsRouter.get("/products", userAuth, async (req, res, next) => {
+  //
 });
 
 module.exports = productsRouter;

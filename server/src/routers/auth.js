@@ -75,7 +75,7 @@ authRouter.post("/auth/login", async (req, res, next) => {
       });
 
       res.json({
-        messege: "Successfully Logegdin",
+        messege: "Successfully Logged-in",
         userData: {
           _id: foundUser._id,
           name: foundUser.name,
