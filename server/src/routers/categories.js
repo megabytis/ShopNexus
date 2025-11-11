@@ -36,7 +36,7 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
   }
 });
 
-categoriesRouter.get("/categories", userAuth, async (req, res, next) => {
+categoriesRouter.get("/categories", async (req, res, next) => {
   try {
     const categoriesNames = await categoriesModel.find().select("name");
     res.json({
