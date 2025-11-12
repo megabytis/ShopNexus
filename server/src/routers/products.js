@@ -50,6 +50,25 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
   }
 });
 
+// GET /products (show all listed products, no specific filter)
+productsRouter.get("/products", async (req, res, next) => {
+  try {
+    const allProducts = await productModel
+      .find()
+      .select("title description price stock image category")
+      .populate("category");
+
+    res.json({
+      messege: "List of all products!",
+      count: allProducts.length,
+      products: allProducts,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /products with multiple filters
 productsRouter.get("/products", async (req, res, next) => {
   try {
     let {
@@ -111,22 +130,6 @@ productsRouter.get("/products", async (req, res, next) => {
   }
 });
 
-productsRouter.get("/products", async (req, res, next) => {
-  try {
-    const allProducts = await productModel
-      .find()
-      .select("title description price stock image category")
-      .populate("category");
-
-    res.json({
-      messege: "List of all products!",
-      count: allProducts.length,
-      products: allProducts,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
 /*
 What GET /products have :-
 - finding all products and selecting specific categories to show 
