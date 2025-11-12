@@ -52,6 +52,67 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
 
 productsRouter.get("/products", async (req, res, next) => {
   try {
+    let {
+      category,
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 10,
+      sortBy = "createdAt",
+      search,
+    } = req.query;
+
+    page = parseInt(page) || 1;
+
+    const MAX_LIMIT = 10;
+    limit = parseInt(limit) || MAX_LIMIT;
+    limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
+
+    const skip = (page - 1) * limit;
+
+    const totalPosts = await productModel.countDocuments();
+    const totalPages = Math.ceil(totalPosts / limit);
+
+    if (page > totalPages && totalPages > 0) {
+      throw new Error("Page limit Exceeded!");
+    }
+
+    const filter = {};
+
+    if (category) {
+      filter.category = category;
+    }
+
+    if (minPrice && maxPrice) filter.price = { $gte: minPrice, $lte: maxPrice };
+    else if (minPrice) filter.price = { $gte: minPrice };
+    else if (maxPrice) filter.price = { $lte: maxPrice };
+
+    if (search) {
+      filter.title = { $regex: search, $options: "i" };
+    }
+
+    const products = await productModel
+      .find(filter)
+      .skip(skip)
+      .limit(limit)
+      .populate("category", "name");
+
+    const total = await productModel.countDocuments(filter);
+
+    res.json({
+      messege: "Filtered Products!",
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      products,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+productsRouter.get("/products", async (req, res, next) => {
+  try {
     const allProducts = await productModel
       .find()
       .select("title description price stock image category")
@@ -91,6 +152,45 @@ productsRouter.get("/products/:id", async (req, res, next) => {
     res.json({
       messege: "Product Found Successfully!",
       product: foundProduct,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
+  try {
+    const { title, description, price, stock, image, category } = req.body;
+
+    const { id } = req.params;
+    validateMongoID(id);
+
+    const foundProduct = await productModel.findByIdAndUpdate(id, {
+      title: title,
+      description: description,
+      price: price,
+      stock: stock,
+      image: image,
+      category: category,
+    });
+
+    res.json({
+      messege: "Product Updated Successfully!",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+productsRouter.delete("/products/:id", userAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    validateMongoID(id);
+
+    const foundProduct = await productModel.findByIdAndDelete(id);
+
+    res.json({
+      messege: "Product deleted Successfully!",
     });
   } catch (err) {
     next(err);
