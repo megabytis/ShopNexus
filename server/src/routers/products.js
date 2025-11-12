@@ -1,7 +1,7 @@
 const express = require("express");
 
 const { userAuth } = require("../middleware/Auth");
-const { validateProductsData } = require("../utils/validate");
+const { validateProductsData, validateMongoID } = require("../utils/validate");
 const { productModel } = require("../models/product");
 const { categoriesModel } = require("../models/category");
 
@@ -74,7 +74,27 @@ What GET /products have :-
 */
 
 productsRouter.get("/products/:id", async (req, res, next) => {
-  //
+  try {
+    const { id } = req.params;
+
+    validateMongoID(id);
+
+    const foundProduct = await productModel
+      .findById(id)
+      .select("title description price stock image category")
+      .populate("category");
+
+    if (!foundProduct) {
+      throw new Error("Invalid Product ID!");
+    }
+
+    res.json({
+      messege: "Product Found Successfully!",
+      product: foundProduct,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = productsRouter;
