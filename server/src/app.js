@@ -8,6 +8,7 @@ const { connectDB } = require("./config/database");
 const authRouter = require("./routers/auth");
 const categoriesRouter = require("./routers/categories");
 const productsRouter = require("./routers/products");
+const cartRouter = require("./routers/cart");
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(cookieparser());
 app.use("/", authRouter);
 app.use("/", categoriesRouter);
 app.use("/", productsRouter);
+app.use("/", cartRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
