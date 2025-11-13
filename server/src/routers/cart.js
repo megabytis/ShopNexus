@@ -107,13 +107,12 @@ cartRouter.delete(
     });
 
     if (!existanceOfItemInCart) {
-      throw new Error("Item doesn't exist in Cart!");
+      throw new Error("Item doesn't exist in the Cart!");
     }
 
-    const indexOfItem = user.cart.indexOf(existanceOfItemInCart);
-    if (indexOfItem > -1) {
-      user.cart.splice(indexOfItem, 1);
-    }
+    user.cart = user.cart.filter((item) => {
+      return item.productId.toString() !== productId;
+    });
 
     await user.save();
 
