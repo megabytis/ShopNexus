@@ -97,29 +97,33 @@ cartRouter.delete(
   "/cart/remove/:productId",
   userAuth,
   async (req, res, next) => {
-    const { productId } = req.params;
-    const user = req.user;
+    try {
+      const { productId } = req.params;
+      const user = req.user;
 
-    validateMongoID(productId);
+      validateMongoID(productId);
 
-    const existanceOfItemInCart = user.cart.find((item) => {
-      return item.productId.toString() === productId.toString();
-    });
+      const existanceOfItemInCart = user.cart.find((item) => {
+        return item.productId.toString() === productId.toString();
+      });
 
-    if (!existanceOfItemInCart) {
-      throw new Error("Item doesn't exist in the Cart!");
+      if (!existanceOfItemInCart) {
+        throw new Error("Item doesn't exist in the Cart!");
+      }
+
+      user.cart = user.cart.filter((item) => {
+        return item.productId.toString() !== productId;
+      });
+
+      await user.save();
+
+      res.json({
+        messege: "Product Removed Successfully!",
+        cart: user.cart,
+      });
+    } catch (err) {
+      next(err);
     }
-
-    user.cart = user.cart.filter((item) => {
-      return item.productId.toString() !== productId;
-    });
-
-    await user.save();
-
-    res.json({
-      messege: "Product Removed Successfully!",
-      cart: user.cart,
-    });
   }
 );
 
