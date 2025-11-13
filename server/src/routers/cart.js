@@ -52,41 +52,45 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
 });
 
 cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
-  const user = req.user;
-  const { productId, newQuantity } = req.body;
+  try {
+    const user = req.user;
+    const { productId, newQuantity } = req.body;
 
-  validateMongoID(productId);
+    validateMongoID(productId);
 
-  const isproductAvailable = await productModel.findById(productId);
+    const isproductAvailable = await productModel.findById(productId);
 
-  if (!isproductAvailable) {
-    throw new Error("Invalid Product ID!");
+    if (!isproductAvailable) {
+      throw new Error("Invalid Product ID!");
+    }
+
+    if (!validator.isNumeric(newQuantity) || newQuantity < 1) {
+      throw new Error("Invalid Quantity!");
+    }
+
+    if (user.cart.length === 0) {
+      throw new Error("Cart is Empty!");
+    }
+
+    const existanceOfItemInCart = user.cart.find((item) => {
+      return item.productId.toString() === productId.toString();
+    });
+
+    if (!existanceOfItemInCart) {
+      throw new Error("Item doesn't exist in Cart!");
+    }
+
+    existanceOfItemInCart.quantity = newQuantity;
+
+    await user.save();
+
+    res.json({
+      messege: "Cart updated Successfully!",
+      cart: user.cart,
+    });
+  } catch (err) {
+    next(err);
   }
-
-  if (!validator.isNumeric(newQuantity) || newQuantity < 1) {
-    throw new Error("Invalid Quantity!");
-  }
-
-  if (user.cart.length === 0) {
-    throw new Error("Cart is Empty!");
-  }
-
-  const existanceOfItemInCart = user.cart.find((item) => {
-    return item.productId.toString() === productId.toString();
-  });
-
-  if (!existanceOfItemInCart) {
-    throw new Error("Item doesn't exist in Cart!");
-  }
-
-  existanceOfItemInCart.quantity = newQuantity;
-
-  await user.save();
-
-  res.json({
-    messege: "Cart updated Successfully!",
-    cart: user.cart,
-  });
 });
 
 module.exports = cartRouter;
