@@ -27,7 +27,7 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
       const savedCategory = await category.save();
 
       res.json({
-        messege: "New category Created!",
+        message: "New category Created!",
         data: savedCategory,
       });
     }
@@ -73,7 +73,7 @@ categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
     const newCategory = await foundCategory.save();
 
     res.json({
-      messege: "Category Modified Successfully! ",
+      message: "Category Modified Successfully! ",
     });
   } catch (err) {
     next(err);
@@ -100,7 +100,7 @@ categoriesRouter.delete("/categories/:id", userAuth, async (req, res, next) => {
     });
 
     res.json({
-      messege: "Category Deleted Successfully! ",
+      message: "Category Deleted Successfully! ",
     });
   } catch (err) {
     next(err);

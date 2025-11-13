@@ -42,7 +42,7 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
     const savedProducts = await products.save();
 
     res.json({
-      messege: "Products",
+      message: "Products",
       data: savedProducts,
     });
   } catch (err) {
@@ -59,7 +59,7 @@ productsRouter.get("/products", async (req, res, next) => {
       .populate("category");
 
     res.json({
-      messege: "List of all products!",
+      message: "List of all products!",
       count: allProducts.length,
       products: allProducts,
     });
@@ -119,7 +119,7 @@ productsRouter.get("/products", async (req, res, next) => {
     const total = await productModel.countDocuments(filter);
 
     res.json({
-      messege: "Filtered Products!",
+      message: "Filtered Products!",
       total,
       page: Number(page),
       limit: Number(limit),
@@ -134,7 +134,7 @@ productsRouter.get("/products", async (req, res, next) => {
 What GET /products have :-
 - finding all products and selecting specific categories to show 
 - populating category, cuz product have taken reference of category, so it will populate about it's specified category in detail
-- in response it will show also total number of products listed along with product details and a sweet messege :) 
+- in response it will show also total number of products listed along with product details and a sweet message :) 
 */
 
 productsRouter.get("/products/:id", async (req, res, next) => {
@@ -153,7 +153,7 @@ productsRouter.get("/products/:id", async (req, res, next) => {
     }
 
     res.json({
-      messege: "Product Found Successfully!",
+      message: "Product Found Successfully!",
       product: foundProduct,
     });
   } catch (err) {
@@ -178,7 +178,7 @@ productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
     });
 
     res.json({
-      messege: "Product Updated Successfully!",
+      message: "Product Updated Successfully!",
     });
   } catch (err) {
     next(err);
@@ -193,7 +193,7 @@ productsRouter.delete("/products/:id", userAuth, async (req, res, next) => {
     const foundProduct = await productModel.findByIdAndDelete(id);
 
     res.json({
-      messege: "Product deleted Successfully!",
+      message: "Product deleted Successfully!",
     });
   } catch (err) {
     next(err);

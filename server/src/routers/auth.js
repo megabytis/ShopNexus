@@ -27,7 +27,7 @@ authRouter.post("/auth/signup", async (req, res, next) => {
     const newUser = await user.save();
 
     res.json({
-      messege: `User added successfully`,
+      message: `User added successfully`,
       data: {
         _id: newUser._id,
         name: newUser.name,
@@ -75,7 +75,7 @@ authRouter.post("/auth/login", async (req, res, next) => {
       });
 
       res.json({
-        messege: "Successfully Logged-in",
+        message: "Successfully Logged-in",
         userData: {
           _id: foundUser._id,
           name: foundUser.name,
