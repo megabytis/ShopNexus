@@ -4,6 +4,7 @@ const validator = require("validator");
 const { userAuth } = require("../middleware/Auth");
 const { validateMongoID } = require("../utils/validate");
 const { productModel } = require("../models/product");
+const { userModel } = require("../models/user");
 
 const cartRouter = express.Router();
 
@@ -43,7 +44,7 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
     await user.save();
 
     res.json({
-      messege: "Cart Updated Successfully!",
+      message: "Cart Updated Successfully!",
       cart: user.cart,
     });
   } catch (err) {
@@ -85,7 +86,7 @@ cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
     await user.save();
 
     res.json({
-      messege: "Cart updated Successfully!",
+      message: "Cart updated Successfully!",
       cart: user.cart,
     });
   } catch (err) {
@@ -118,7 +119,7 @@ cartRouter.delete(
       await user.save();
 
       res.json({
-        messege: "Product Removed Successfully!",
+        message: "Product Removed Successfully!",
         cart: user.cart,
       });
     } catch (err) {
@@ -126,5 +127,35 @@ cartRouter.delete(
     }
   }
 );
+
+cartRouter.get("/cart", userAuth, async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    const cartDetails = await userModel
+      .findById(user._id)
+      .select("cart")
+      .populate("cart.productId");
+
+    let totalAmount = 0.0;
+    let totalItems = 0;
+    let totalQuantity = 0;
+    for (const items of cartDetails.cart) {
+      totalAmount += Number(items.productId.price * items.quantity);
+      totalItems++;
+      totalQuantity += Number(items.quantity);
+    }
+
+    res.json({
+      message: "Cart!",
+      totalItems: totalItems,
+      totalQuantity: totalQuantity,
+      totalAmount: totalAmount,
+      cart: cartDetails.cart,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = cartRouter;
