@@ -93,4 +93,35 @@ cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
   }
 });
 
+cartRouter.delete(
+  "/cart/remove/:productId",
+  userAuth,
+  async (req, res, next) => {
+    const { productId } = req.params;
+    const user = req.user;
+
+    validateMongoID(productId);
+
+    const existanceOfItemInCart = user.cart.find((item) => {
+      return item.productId.toString() === productId.toString();
+    });
+
+    if (!existanceOfItemInCart) {
+      throw new Error("Item doesn't exist in Cart!");
+    }
+
+    const indexOfItem = user.cart.indexOf(existanceOfItemInCart);
+    if (indexOfItem > -1) {
+      user.cart.splice(indexOfItem, 1);
+    }
+
+    await user.save();
+
+    res.json({
+      messege: "Product Removed Successfully!",
+      cart: user.cart,
+    });
+  }
+);
+
 module.exports = cartRouter;
