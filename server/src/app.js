@@ -9,6 +9,7 @@ const authRouter = require("./routers/auth");
 const categoriesRouter = require("./routers/categories");
 const productsRouter = require("./routers/products");
 const cartRouter = require("./routers/cart");
+const checkoutRouter = require("./routers/checkout");
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use("/", authRouter);
 app.use("/", categoriesRouter);
 app.use("/", productsRouter);
 app.use("/", cartRouter);
+app.use("/", checkoutRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
