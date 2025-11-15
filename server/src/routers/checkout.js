@@ -74,7 +74,6 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
 
     const cartDetails = await userModel
       .findById(user._id.toString())
-      .select("cart")
       .populate("cart.productId");
 
     if (!cartDetails.cart.length) {
@@ -110,7 +109,7 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
     }
 
     // Creating Order
-    const newOrder = orderModel.create({
+    const newOrder = await orderModel.create({
       userId: user._id,
       items: orderItems,
       totalAmount: totalAmount,
