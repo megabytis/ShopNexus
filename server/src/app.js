@@ -10,6 +10,7 @@ const categoriesRouter = require("./routers/categories");
 const productsRouter = require("./routers/products");
 const cartRouter = require("./routers/cart");
 const checkoutRouter = require("./routers/checkout");
+const orderRouter = require("./routers/orders");
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/", categoriesRouter);
 app.use("/", productsRouter);
 app.use("/", cartRouter);
 app.use("/", checkoutRouter);
+app.use("/", orderRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
