@@ -61,9 +61,22 @@ const validateProductsData = (req) => {
   }
 };
 
+const validateOrderStatus = (req) => {
+  const { orderStatus } = req.body;
+
+  const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
+
+  if (!orderStatus) {
+    throw new Error("No status has given!");
+  } else if (!validOrderStatus.includes(orderStatus)) {
+    throw new Error("Invalid Order Status!");
+  }
+};
+
 module.exports = {
   validateSignupData,
   validateNewCategoriesData,
   validateMongoID,
   validateProductsData,
+  validateOrderStatus,
 };
