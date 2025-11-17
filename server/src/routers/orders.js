@@ -2,6 +2,7 @@ const express = require("express");
 
 const { userAuth } = require("../middleware/Auth");
 const { orderModel } = require("../models/order");
+const { validateMongoID, validateOrderStatus } = require("../utils/validate");
 
 const orderRouter = express.Router();
 
@@ -81,6 +82,41 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
     totalOrders: allOrders.length,
     allOrders,
   });
+});
+
+orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { orderStatus } = req.body;
+    const { id } = req.params;
+
+    validateMongoID(id);
+    validateOrderStatus(req);
+
+    if (user.role !== "admin") {
+      throw new Error("U r not Authorized to see all Orders!");
+    }
+
+    const foundOrder = await orderModel.findById(id);
+    if (!foundOrder) {
+      throw new Error("Order doesn't exist!");
+    }
+
+    const updatedOrderStatus = await orderModel.findByIdAndUpdate(
+      id,
+      {
+        orderStatus: orderStatus.toString(),
+      },
+      { new: true }
+    );
+
+    res.json({
+      message: "Order status Updated Successfully!",
+      updatedOrder: updatedOrderStatus,
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 module.exports = orderRouter;
