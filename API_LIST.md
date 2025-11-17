@@ -60,4 +60,4 @@ POST /orders (auto called after razorpay confirms payment)
 GET /orders/my (user)
 GET /orders/:id
 GET /orders (admin)
-PUT /orders/:id/status (admin)
+PUT /orders/:id/status (admin) - status goes like: processing -> shipped -> delivered -> canceled
