@@ -67,4 +67,20 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
   }
 });
 
+orderRouter.get("/orders", userAuth, async (req, res, next) => {
+  const user = req.user;
+
+  if (user.role !== "admin") {
+    throw new Error("U r not Authorized to see all Orders!");
+  }
+
+  const allOrders = await orderModel.find().sort({ createdAt: -1 });
+
+  res.json({
+    message: "All orders Fetched!",
+    totalOrders: allOrders.length,
+    allOrders,
+  });
+});
+
 module.exports = orderRouter;
