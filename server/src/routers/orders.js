@@ -3,6 +3,9 @@ const express = require("express");
 const { userAuth } = require("../middleware/Auth");
 const { orderModel } = require("../models/order");
 const { validateMongoID, validateOrderStatus } = require("../utils/validate");
+const { userModel } = require("../models/user");
+const { productModel } = require("../models/product");
+const { default: mongoose } = require("mongoose");
 
 const orderRouter = express.Router();
 
@@ -70,16 +73,159 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
 
 orderRouter.get("/orders", userAuth, async (req, res, next) => {
   const user = req.user;
+  let {
+    page,
+    limit,
+    orderStatus, // "processing", "shipped", "delivered", "cancelled"
+    paymentStatus, // "paid", "pending", "failed"
+    min, // minimum totalAmount
+    max, // maximum totalAmount
+    from, // createdAt >= from
+    to, // createdAt <= to
+    userId, // filter orders of a specific user (admin use)
+    productId, // filter orders containing a specific product
+    sortBy, // field to sort (createdAt, totalAmount)
+    order, // asc / desc
+  } = req.query;
+
+  const orderQuery = {};
+
+  // ---------------MIN-MAX FILTER----------------
+  // imp: converting both min, max to Number before inserting it to query
+
+  if (min && max) {
+    min = Number(min);
+    max = Number(max);
+    orderQuery.totalAmount = {
+      $gte: min,
+      $lte: max,
+    };
+  } else if (min) {
+    min = Number(min);
+    orderQuery.totalAmount = {
+      $gte: min,
+    };
+  } else if (max) {
+    max = Number(max);
+    orderQuery.totalAmount = {
+      $lte: max,
+    };
+  }
+
+  // --------------orderStatus FIlter--------------
+  // logic: assign the value if EXISTS and VALID otherwise leave it
+  const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
+
+  if (orderStatus && validOrderStatus.includes(orderStatus)) {
+    orderQuery.orderStatus = orderStatus;
+  } else {
+    // throw new Error("Invalid orderSttaus Filter!");
+    // or better
+    // ignore this filter , which is fat better & softer than throwing error in query cases
+  }
+
+  // ----------paymentStatus Filter---------------
+  // logic is same like order Status
+  const validatePaymentStatus = ["paid", "pending", "failed"];
+
+  if (paymentStatus && validatePaymentStatus.includes(paymentStatus)) {
+    orderQuery.paymentStatus = paymentStatus;
+  }
+
+  // -----------------userId Filter-----------------
+  if (userId) {
+    const isUserIdValid = await userModel.findById(userId.toString());
+    mongoose.Types.ObjectId.isValid(userId);
+    if (isUserIdValid) {
+      orderQuery.userId = userId;
+    }
+  }
+
+  // ----------------productId Filter-------------------------
+  if (productId) {
+    const isValidProductId = await productModel.findById(productId.toString());
+    if (isValidProductId) {
+      orderQuery["items.productId"] = productId;
+    }
+  }
+
+  // -------------FROM-TO Filter-------------------
+  if (from && to) {
+    let toDate = new Date(to);
+    toDate.setHours(23, 59, 59, 999);
+
+    orderQuery.createdAt = {
+      $gte: new Date(from),
+      $lte: new Date(toDate),
+    };
+  } else if (from) {
+    orderQuery.createdAt = {
+      $gte: new Date(from),
+    };
+  } else if (to) {
+    let toDate = new Date(to);
+    toDate.setHours(23, 59, 59, 999);
+
+    orderQuery.createdAt = {
+      $lte: new Date(toDate),
+    };
+  }
+
+  // ---------------SORT-BY & ORDER FILTER-------------------
+  let finalSortField;
+  const allowedfinalSortFields = [
+    "createdAt",
+    "totalAmount",
+    "orderStatus",
+    "paymentStatus",
+  ];
+  if (sortBy && allowedfinalSortFields.includes(sortBy)) {
+    finalSortField = sortBy.toString();
+  } else {
+    finalSortField = "createdAt";
+  }
+
+  let finalSortDirection;
+  if (order === "asc") {
+    finalSortDirection = 1;
+  } else {
+    finalSortDirection = -1;
+  }
+
+  const sortObject = { [finalSortField]: finalSortDirection };
+
+  // --------------PAGE FILTER-----------
+
+  page = parseInt(page) || 1;
+
+  const MAX_LIMIT = 5;
+  limit = parseInt(req.query.limit) || MAX_LIMIT;
+  limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
+
+  const skip = (page - 1) * limit;
+
+  const totalOrders = await orderModel.countDocuments(orderQuery);
+  const totalPages = Math.ceil(totalOrders / limit);
+
+  if (page > totalPages && totalPages > 0) {
+    throw new Error("Page is not available!");
+  }
 
   if (user.role !== "admin") {
     throw new Error("U r not Authorized to see all Orders!");
   }
 
-  const allOrders = await orderModel.find().sort({ createdAt: -1 });
+  const allOrders = await orderModel
+    .find(orderQuery)
+    .sort(sortObject)
+    .skip(skip)
+    .limit(limit);
 
   res.json({
     message: "All orders Fetched!",
     totalOrders: allOrders.length,
+    page: Number(page),
+    limit: Number(limit),
     allOrders,
   });
 });
