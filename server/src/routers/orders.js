@@ -46,10 +46,11 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
   try {
     const user = req.user;
     const orderId = req.params.id;
-    mongoose.Types.ObjectId.isValid(orderId);
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      throw new Error("Invalid OrderId!");
+    }
 
     const foundOrder = await orderModel.findById(orderId);
-
     if (!foundOrder) {
       throw new Error("Order not found!");
     }
@@ -57,7 +58,6 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
     const isAdmin = user.role === "admin";
     const isOwnerOfTheOrderId =
       foundOrder.userId.toString() === user._id.toString();
-
     if (!isOwnerOfTheOrderId && !isAdmin) {
       throw new Error("Access Denied! You can't view this order!");
     }
@@ -72,175 +72,183 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
 });
 
 orderRouter.get("/orders", userAuth, async (req, res, next) => {
-  const user = req.user;
+  try {
+    const user = req.user;
 
-  if (user.role !== "admin") {
-    throw new Error("Access Denied. You're not Authorised!");
-  }
+    if (user.role !== "admin") {
+      return res.status(403).json({ error: "Access Denied" });
+    }
 
-  let {
-    page,
-    limit,
-    orderStatus, // "processing", "shipped", "delivered", "cancelled"
-    paymentStatus, // "paid", "pending", "failed"
-    min, // minimum totalAmount
-    max, // maximum totalAmount
-    from, // createdAt >= from
-    to, // createdAt <= to
-    userId, // filter orders of a specific user (admin use)
-    productId, // filter orders containing a specific product
-    sortBy, // field to sort (createdAt, totalAmount)
-    order, // asc / desc
-  } = req.query;
+    let {
+      page,
+      limit,
+      orderStatus, // "processing", "shipped", "delivered", "cancelled"
+      paymentStatus, // "paid", "pending", "failed"
+      min, // minimum totalAmount
+      max, // maximum totalAmount
+      from, // createdAt >= from
+      to, // createdAt <= to
+      userId, // filter orders of a specific user (admin use)
+      productId, // filter orders containing a specific product
+      sortBy, // field to sort (createdAt, totalAmount)
+      order, // asc / desc
+    } = req.query;
 
-  const orderQuery = {};
+    const orderQuery = {};
 
-  // ---------------MIN-MAX FILTER----------------
-  // imp: converting both min, max to Number before inserting it to query
+    // ---------------MIN-MAX FILTER----------------
+    // imp: converting both min, max to Number before inserting it to query
 
-  if (min && max) {
-    min = Number(min);
-    max = Number(max);
-    if (!Number.isNaN(min) && !Number.isNaN(max)) {
-      orderQuery.totalAmount = {
-        $gte: min,
-        $lte: max,
+    if (min && max) {
+      min = Number(min);
+      max = Number(max);
+      if (!Number.isNaN(min) && !Number.isNaN(max)) {
+        orderQuery.totalAmount = {
+          $gte: min,
+          $lte: max,
+        };
+      }
+    } else if (min) {
+      min = Number(min);
+      if (!Number.isNaN(min)) {
+        orderQuery.totalAmount = {
+          $gte: min,
+        };
+      }
+    } else if (max) {
+      max = Number(max);
+      if (!Number.isNaN(max)) {
+        orderQuery.totalAmount = {
+          $lte: max,
+        };
+      }
+    }
+
+    // --------------orderStatus FIlter--------------
+    // logic: assign the value if EXISTS and VALID otherwise leave it
+    const validOrderStatus = [
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+    ];
+
+    if (orderStatus && validOrderStatus.includes(orderStatus)) {
+      orderQuery.orderStatus = orderStatus;
+    } else {
+      // throw new Error("Invalid orderSttaus Filter!");
+      // or better
+      // ignore this filter , which is fat better & softer than throwing error in query cases
+    }
+
+    // ----------paymentStatus Filter---------------
+    // logic is same like order Status
+    const validatePaymentStatus = ["paid", "pending", "failed"];
+
+    if (paymentStatus && validatePaymentStatus.includes(paymentStatus)) {
+      orderQuery.paymentStatus = paymentStatus;
+    }
+
+    // -----------------userId Filter-----------------
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+      const isUserIdValid = await userModel.findById(userId.toString());
+      if (isUserIdValid) {
+        orderQuery.userId = userId;
+      }
+    }
+
+    // ----------------productId Filter-------------------------
+    if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+      const isValidProductId = await productModel.findById(
+        productId.toString()
+      );
+      if (isValidProductId) {
+        orderQuery["items.productId"] = productId;
+      }
+    }
+
+    // -------------FROM-TO Filter-------------------
+    if (from && to) {
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+
+      if (fromDate <= toDate && !isNaN(fromDate) && !isNaN(toDate)) {
+        orderQuery.createdAt = {
+          $gte: fromDate,
+          $lte: toDate,
+        };
+      }
+    } else if (from) {
+      orderQuery.createdAt = {
+        $gte: new Date(from),
+      };
+    } else if (to) {
+      let toDate = new Date(to);
+      toDate.setHours(23, 59, 59, 999);
+
+      orderQuery.createdAt = {
+        $lte: new Date(toDate),
       };
     }
-  } else if (min) {
-    min = Number(min);
-    if (!Number.isNaN(min)) {
-      orderQuery.totalAmount = {
-        $gte: min,
-      };
+
+    // ---------------SORT-BY & ORDER FILTER-------------------
+    let finalSortField;
+    const allowedfinalSortFields = [
+      "createdAt",
+      "totalAmount",
+      "orderStatus",
+      "paymentStatus",
+    ];
+    if (sortBy && allowedfinalSortFields.includes(sortBy)) {
+      finalSortField = sortBy.toString();
+    } else {
+      finalSortField = "createdAt";
     }
-  } else if (max) {
-    max = Number(max);
-    if (!Number.isNaN(max)) {
-      orderQuery.totalAmount = {
-        $lte: max,
-      };
+
+    let finalSortDirection;
+    if (order === "asc") {
+      finalSortDirection = 1;
+    } else {
+      finalSortDirection = -1;
     }
-  }
 
-  // --------------orderStatus FIlter--------------
-  // logic: assign the value if EXISTS and VALID otherwise leave it
-  const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
+    const sortObject = { [finalSortField]: finalSortDirection };
 
-  if (orderStatus && validOrderStatus.includes(orderStatus)) {
-    orderQuery.orderStatus = orderStatus;
-  } else {
-    // throw new Error("Invalid orderSttaus Filter!");
-    // or better
-    // ignore this filter , which is fat better & softer than throwing error in query cases
-  }
+    // --------------PAGE FILTER-----------
 
-  // ----------paymentStatus Filter---------------
-  // logic is same like order Status
-  const validatePaymentStatus = ["paid", "pending", "failed"];
+    page = parseInt(page) || 1;
 
-  if (paymentStatus && validatePaymentStatus.includes(paymentStatus)) {
-    orderQuery.paymentStatus = paymentStatus;
-  }
+    const MAX_LIMIT = 5;
+    limit = parseInt(req.query.limit) || MAX_LIMIT;
+    limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
 
-  // -----------------userId Filter-----------------
-  if (userId) {
-    mongoose.Types.ObjectId.isValid(userId);
-    const isUserIdValid = await userModel.findById(userId.toString());
-    if (isUserIdValid) {
-      orderQuery.userId = userId;
+    const skip = (page - 1) * limit;
+
+    const totalOrders = await orderModel.countDocuments(orderQuery);
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    if (page > totalPages && totalPages > 0) {
+      throw new Error("Page is not available!");
     }
+
+    const allOrders = await orderModel
+      .find(orderQuery)
+      .sort(sortObject)
+      .skip(skip)
+      .limit(limit);
+
+    res.json({
+      message: "All orders Fetched!",
+      totalOrders,
+      totalPages,
+      page: Number(page),
+      limit: Number(limit),
+      allOrders,
+    });
+  } catch (err) {
+    next(err);
   }
-
-  // ----------------productId Filter-------------------------
-  if (productId) {
-    mongoose.Types.ObjectId.isValid(productId);
-    const isValidProductId = await productModel.findById(productId.toString());
-    if (isValidProductId) {
-      orderQuery["items.productId"] = productId;
-    }
-  }
-
-  // -------------FROM-TO Filter-------------------
-  if (from && to) {
-    let toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
-
-    orderQuery.createdAt = {
-      $gte: new Date(from),
-      $lte: toDate,
-    };
-  } else if (from) {
-    orderQuery.createdAt = {
-      $gte: new Date(from),
-    };
-  } else if (to) {
-    let toDate = new Date(to);
-    toDate.setHours(23, 59, 59, 999);
-
-    orderQuery.createdAt = {
-      $lte: new Date(toDate),
-    };
-  }
-
-  // ---------------SORT-BY & ORDER FILTER-------------------
-  let finalSortField;
-  const allowedfinalSortFields = [
-    "createdAt",
-    "totalAmount",
-    "orderStatus",
-    "paymentStatus",
-  ];
-  if (sortBy && allowedfinalSortFields.includes(sortBy)) {
-    finalSortField = sortBy.toString();
-  } else {
-    finalSortField = "createdAt";
-  }
-
-  let finalSortDirection;
-  if (order === "asc") {
-    finalSortDirection = 1;
-  } else {
-    finalSortDirection = -1;
-  }
-
-  const sortObject = { [finalSortField]: finalSortDirection };
-
-  // --------------PAGE FILTER-----------
-
-  page = parseInt(page) || 1;
-
-  const MAX_LIMIT = 5;
-  limit = parseInt(req.query.limit) || MAX_LIMIT;
-  limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
-
-  const skip = (page - 1) * limit;
-
-  const totalOrders = await orderModel.countDocuments(orderQuery);
-  const totalPages = Math.ceil(totalOrders / limit);
-
-  if (page > totalPages && totalPages > 0) {
-    throw new Error("Page is not available!");
-  }
-
-  if (user.role !== "admin") {
-    throw new Error("U r not Authorized to see all Orders!");
-  }
-
-  const allOrders = await orderModel
-    .find(orderQuery)
-    .sort(sortObject)
-    .skip(skip)
-    .limit(limit);
-
-  res.json({
-    message: "All orders Fetched!",
-    totalOrders,
-    totalPages,
-    page: Number(page),
-    limit: Number(limit),
-    allOrders,
-  });
 });
 
 orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
@@ -249,11 +257,13 @@ orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
     const { orderStatus } = req.body;
     const { id } = req.params;
 
-    mongoose.Types.ObjectId.isValid(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error("Invalid MongoId!");
+    }
     validateOrderStatus(req);
 
     if (user.role !== "admin") {
-      throw new Error("U r not Authorized to see all Orders!");
+      return res.status(403).json({ error: "Access Denied!" });
     }
 
     const foundOrder = await orderModel.findById(id);
