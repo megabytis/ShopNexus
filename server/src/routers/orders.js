@@ -46,6 +46,7 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
   try {
     const user = req.user;
     const orderId = req.params.id;
+    mongoose.Types.ObjectId.isValid(orderId);
 
     const foundOrder = await orderModel.findById(orderId);
 
@@ -63,8 +64,7 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
 
     res.json({
       messege: "Orders Fetched!",
-      ordersLength: foundOrder.length,
-      orders: foundOrder,
+      order: foundOrder,
     });
   } catch (err) {
     next(err);
@@ -73,6 +73,11 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
 
 orderRouter.get("/orders", userAuth, async (req, res, next) => {
   const user = req.user;
+
+  if (user.role !== "admin") {
+    throw new Error("Access Denied. You're not Authorised!");
+  }
+
   let {
     page,
     limit,
@@ -96,20 +101,26 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
   if (min && max) {
     min = Number(min);
     max = Number(max);
-    orderQuery.totalAmount = {
-      $gte: min,
-      $lte: max,
-    };
+    if (!Number.isNaN(min) && !Number.isNaN(max)) {
+      orderQuery.totalAmount = {
+        $gte: min,
+        $lte: max,
+      };
+    }
   } else if (min) {
     min = Number(min);
-    orderQuery.totalAmount = {
-      $gte: min,
-    };
+    if (!Number.isNaN(min)) {
+      orderQuery.totalAmount = {
+        $gte: min,
+      };
+    }
   } else if (max) {
     max = Number(max);
-    orderQuery.totalAmount = {
-      $lte: max,
-    };
+    if (!Number.isNaN(max)) {
+      orderQuery.totalAmount = {
+        $lte: max,
+      };
+    }
   }
 
   // --------------orderStatus FIlter--------------
@@ -134,8 +145,8 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
 
   // -----------------userId Filter-----------------
   if (userId) {
-    const isUserIdValid = await userModel.findById(userId.toString());
     mongoose.Types.ObjectId.isValid(userId);
+    const isUserIdValid = await userModel.findById(userId.toString());
     if (isUserIdValid) {
       orderQuery.userId = userId;
     }
@@ -143,6 +154,7 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
 
   // ----------------productId Filter-------------------------
   if (productId) {
+    mongoose.Types.ObjectId.isValid(productId);
     const isValidProductId = await productModel.findById(productId.toString());
     if (isValidProductId) {
       orderQuery["items.productId"] = productId;
@@ -156,7 +168,7 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
 
     orderQuery.createdAt = {
       $gte: new Date(from),
-      $lte: new Date(toDate),
+      $lte: toDate,
     };
   } else if (from) {
     orderQuery.createdAt = {
@@ -223,7 +235,8 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
 
   res.json({
     message: "All orders Fetched!",
-    totalOrders: allOrders.length,
+    totalOrders,
+    totalPages,
     page: Number(page),
     limit: Number(limit),
     allOrders,
@@ -236,7 +249,7 @@ orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
     const { orderStatus } = req.body;
     const { id } = req.params;
 
-    validateMongoID(id);
+    mongoose.Types.ObjectId.isValid(id);
     validateOrderStatus(req);
 
     if (user.role !== "admin") {
