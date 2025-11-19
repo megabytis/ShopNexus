@@ -2,7 +2,7 @@ const express = require("express");
 
 const { userAuth } = require("../middleware/Auth");
 const { orderModel } = require("../models/order");
-const { validateMongoID, validateOrderStatus } = require("../utils/validate");
+const { validateOrderStatus } = require("../utils/validate");
 const { userModel } = require("../models/user");
 const { productModel } = require("../models/product");
 const { default: mongoose } = require("mongoose");
@@ -17,8 +17,12 @@ orderRouter.get("/orders/my", userAuth, async (req, res, next) => {
       .find({ userId: user._id })
       .sort({ createdAt: -1 });
 
-    if (foundOrder.length === 0) {
-      throw new Error("Orders not Found!");
+    if (!foundOrder.length) {
+      return res.json({
+        message: "No orders yet!",
+        ordersLength: 0,
+        orders: [],
+      });
     }
 
     res.json({
@@ -63,7 +67,7 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
     }
 
     res.json({
-      messege: "Orders Fetched!",
+      messege: "Order Fetched!",
       order: foundOrder,
     });
   } catch (err) {
@@ -135,10 +139,6 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
 
     if (orderStatus && validOrderStatus.includes(orderStatus)) {
       orderQuery.orderStatus = orderStatus;
-    } else {
-      // throw new Error("Invalid orderSttaus Filter!");
-      // or better
-      // ignore this filter , which is fat better & softer than throwing error in query cases
     }
 
     // ----------paymentStatus Filter---------------
@@ -163,7 +163,7 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
         productId.toString()
       );
       if (isValidProductId) {
-        orderQuery["items.productId"] = productId;
+        orderQuery["items.productId"] = mongoose.Types.ObjectId(productId);
       }
     }
 
@@ -209,6 +209,8 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
     let finalSortDirection;
     if (order === "asc") {
       finalSortDirection = 1;
+    } else if (order === "desc") {
+      finalSortDirection = -1;
     } else {
       finalSortDirection = -1;
     }
@@ -268,7 +270,7 @@ orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
 
     const foundOrder = await orderModel.findById(id);
     if (!foundOrder) {
-      throw new Error("Order doesn't exist!");
+      return res.status(404).json({ error: "Order not found" });
     }
 
     const updatedOrderStatus = await orderModel.findByIdAndUpdate(
