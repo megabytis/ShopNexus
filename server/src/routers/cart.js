@@ -1,4 +1,6 @@
 const express = require("express");
+3;
+2;
 const validator = require("validator");
 
 const { userAuth } = require("../middleware/Auth");
@@ -15,13 +17,14 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
 
     validateMongoID(productId);
 
-    const isproductAvailable = await productModel.findById(productId);
+    const availableProduct = await productModel.findById(productId);
 
-    if (!isproductAvailable) {
+    if (!availableProduct) {
       throw new Error("Invalid Product ID!");
     }
 
-    if (!validator.isNumeric(quantity) || quantity < 1) {
+    const qty = Number(quantity);
+    if (!qty || qty < 1) {
       throw new Error("Invalid Quantity!");
     }
 
@@ -29,6 +32,16 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
     const existanceOfItemInCart = user.cart.find((item) => {
       return item.productId.toString() === productId.toString();
     });
+
+    // checking wheather product is Out-Of-Stock
+    if (availableProduct.stock < 1) {
+      throw new Error("Product is Out of stock!");
+    }
+    if (qty > availableProduct.stock) {
+      throw new Error(
+        `Only ${availableProduct.stock} items available in stock. You requested ${qty}.`
+      );
+    }
 
     if (existanceOfItemInCart) {
       // if the item exists then add new quantity with old existing quantity
@@ -59,14 +72,21 @@ cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
 
     validateMongoID(productId);
 
-    const isproductAvailable = await productModel.findById(productId);
+    const availableProduct = await productModel.findById(productId);
 
-    if (!isproductAvailable) {
+    if (!availableProduct) {
       throw new Error("Invalid Product ID!");
     }
 
-    if (!validator.isNumeric(newQuantity) || newQuantity < 1) {
+    const nqty = Number(newQuantity);
+    if (!nqty || nqty < 1) {
       throw new Error("Invalid Quantity!");
+    }
+
+    if (!nqty > availableProduct.stock) {
+      throw new Error(
+        `Only ${availableProduct.stock} items available in stock. You requested ${nqty}.`
+      );
     }
 
     if (user.cart.length === 0) {
@@ -113,7 +133,7 @@ cartRouter.delete(
       }
 
       user.cart = user.cart.filter((item) => {
-        return item.productId.toString() !== productId;
+        return item.productId.toString() !== productId.toString();
       });
 
       await user.save();
@@ -137,21 +157,54 @@ cartRouter.get("/cart", userAuth, async (req, res, next) => {
       .select("cart")
       .populate("cart.productId");
 
+    if (!cartDetails?.cart?.length) {
+      return res.json({
+        message: "Cart is Empty!",
+        totalItems: 0,
+        totalQuantity: 0,
+        totalAmount: 0,
+        cart: [],
+      });
+    }
+
+    // filtering out deleted products
+    const validCartItems = cartDetails.cart.filter((item) => {
+      if (!item?.productId || item.productId.price === undefined) {
+        return false;
+      }
+      return true;
+    });
+
     let totalAmount = 0.0;
     let totalItems = 0;
     let totalQuantity = 0;
-    for (const items of cartDetails.cart) {
+
+    // calculating totals of valid items only
+    for (const items of validCartItems) {
       totalAmount += Number(items.productId.price * items.quantity);
       totalItems++;
       totalQuantity += Number(items.quantity);
     }
 
+    // updating user's cart if there were deleted products
+    if (validCartItems.length !== cartDetails.cart.length) {
+      await userModel.findByIdAndUpdate(
+        user._id,
+        { cart: validCartItems },
+        { new: true }
+      );
+    }
+
     res.json({
-      message: "Cart!",
-      totalItems: totalItems,
-      totalQuantity: totalQuantity,
-      totalAmount: totalAmount,
-      cart: cartDetails.cart,
+      message:
+        validCartItems.length < cartDetails.cart.length
+          ? "Cart loaded (some unavailable items were removed)!"
+          : "Cart",
+      totalItems: Number(totalItems),
+      totalQuantity: Number(totalQuantity),
+      totalAmount: Number(totalAmount),
+      removedCartItems: cartDetails.cart.length - validCartItems.length,
+      cart: validCartItems,
     });
   } catch (err) {
     next(err);
