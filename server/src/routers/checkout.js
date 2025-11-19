@@ -21,12 +21,17 @@ const checkoutRouter = express.Router();
 checkoutRouter.post("/checkout/summary", userAuth, async (req, res, next) => {
   try {
     const user = req.user;
-    let totalAmount = 0.0;
 
     const cartDetails = await userModel
       .findById(user._id.toString())
       .select("cart")
       .populate("cart.productId");
+
+    if (!cartDetails || !cartDetails.cart?.length) {
+      return res.json({
+        message: "Cart is Empty!",
+      });
+    }
 
     // verifying each product and calculating total Amount
     for (const item of cartDetails.cart) {
@@ -44,13 +49,14 @@ checkoutRouter.post("/checkout/summary", userAuth, async (req, res, next) => {
       }
 
       // Total Amount
+      let totalAmount = 0;
       totalAmount += Number(availableProduct.price * item.quantity);
     }
     res.json({
       message: "Checkout Summary!",
+      amount: Number(totalAmount),
       currency: "INR",
-      Amount: totalAmount,
-      item: cartDetails.cart.length,
+      totalItems: cartDetails.cart.length,
     });
   } catch (err) {
     next(err);
@@ -112,23 +118,35 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
     const newOrder = await orderModel.create({
       userId: user._id,
       items: orderItems,
-      totalAmount: totalAmount,
+      totalAmount: Number(totalAmount),
       paymentStatus: "paid",
       orderStatus: "processing",
     });
 
     // Deducting stock for each product
     for (const item of cartDetails.cart) {
-      await productModel.findByIdAndUpdate(item.productId._id, {
-        $inc: { stock: -item.quantity },
-      });
+      const result = await productModel.updateOne(
+        {
+          _id: item.productId._id,
+          stock: { $gte: item.quantity },
+        },
+        {
+          $inc: { stock: -item.quantity },
+        }
+      );
+
+      if (result.modifiedCount === 0) {
+        throw new Error(
+          `Stock changed! Only ${item.productId.stock} left for ${item.productId.title}`
+        );
+      }
     }
 
     // at the end clearing user cart
     cartDetails.cart = [];
     await cartDetails.save();
 
-    res.json({
+    res.status(201).json({
       message: "Payment successful! Order created.",
       order: newOrder,
     });
