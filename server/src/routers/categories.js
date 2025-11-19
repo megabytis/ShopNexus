@@ -2,7 +2,6 @@ const express = require("express");
 
 const { categoriesModel } = require("../models/category");
 const { userAuth } = require("../middleware/Auth");
-const { userModel } = require("../models/user");
 const {
   validateNewCategoriesData,
   validateMongoID,
@@ -17,20 +16,26 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
 
     validateNewCategoriesData(req);
 
+    const availableCategory = await categoriesModel.findOne({
+      name: name,
+    });
+    if (!availableCategory) {
+      throw new Error("Category already exists!");
+    }
+
     if (!isAdmin) {
       throw new Error("You are not authorised to Post categories!");
-    } else {
-      const category = new categoriesModel({
-        name: name,
-      });
-
-      const savedCategory = await category.save();
-
-      res.json({
-        message: "New category Created!",
-        data: savedCategory,
-      });
     }
+
+    const category = new categoriesModel({
+      name: name.trim().toLowerCase(),
+    });
+    const savedCategory = await category.save();
+
+    res.json({
+      message: "New category Created!",
+      data: savedCategory,
+    });
   } catch (err) {
     next(err);
   }
@@ -40,6 +45,7 @@ categoriesRouter.get("/categories", async (req, res, next) => {
   try {
     const categoriesNames = await categoriesModel.find().select("name");
     res.json({
+      message: "Categories",
       data: categoriesNames,
     });
   } catch (err) {
@@ -53,27 +59,24 @@ categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
     const { name } = req.body;
     const { id } = req.params;
 
-    validateMongoID(id);
-    validateNewCategoriesData(req);
-
-    const categoryFoundOrNot = await categoriesModel.findById(id.toString());
-
-    if (!categoryFoundOrNot) {
-      throw new Error("Invalid MongoID!");
-    }
-
     if (!isAdmin) {
       throw new Error("You are not authorised to Post categories!");
     }
+    validateMongoID(id);
+    validateNewCategoriesData(req);
 
-    const foundCategory = await categoriesModel.findByIdAndUpdate(id, {
-      name: name,
-    });
+    const cat = await categoriesModel.findById(id);
 
-    const newCategory = await foundCategory.save();
+    if (!cat) {
+      throw new Error("Invalid MongoID!");
+    }
+
+    cat.name = name;
+    await cat.save();
 
     res.json({
       message: "Category Modified Successfully! ",
+      updatedCategory: cat,
     });
   } catch (err) {
     next(err);
@@ -95,12 +98,13 @@ categoriesRouter.delete("/categories/:id", userAuth, async (req, res, next) => {
       throw new Error("Invalid MongoID!");
     }
 
-    const deleteCategory = await categoriesModel.deleteOne({
+    const deletedCategory = await categoriesModel.findByIdAndDelete({
       _id: id.toString(),
     });
 
     res.json({
       message: "Category Deleted Successfully! ",
+      deletedCategory,
     });
   } catch (err) {
     next(err);
