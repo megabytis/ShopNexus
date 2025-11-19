@@ -10,7 +10,12 @@ const authRouter = express.Router();
 
 authRouter.post("/auth/signup", async (req, res, next) => {
   try {
-    const { name, email, password, role, cart } = req.body;
+    const { name, email, password } = req.body;
+
+    const isEmailAvailable = await userModel.find({ email: email });
+    if (!isEmailAvailable) {
+      throw new Error("Email already Registered!");
+    }
 
     validateSignupData(req);
 
@@ -20,8 +25,6 @@ authRouter.post("/auth/signup", async (req, res, next) => {
       name: name,
       email: email,
       password: hashedPassword,
-      role: role,
-      cart: cart,
     });
 
     const newUser = await user.save();
@@ -32,8 +35,6 @@ authRouter.post("/auth/signup", async (req, res, next) => {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role,
-        cart: newUser.cart,
       },
     });
   } catch (err) {
@@ -67,10 +68,11 @@ authRouter.post("/auth/login", async (req, res, next) => {
         }
       );
 
+      const isProd = process.env.NODE_ENV === "production";
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000,
       });
 
@@ -96,6 +98,9 @@ authRouter.post("/auth/logout", async (req, res, next) => {
     httpOnly: true,
     secure: true,
     sameSite: "none",
+  });
+  res.json({
+    message: "Logged Out Successfully!",
   });
 });
 
