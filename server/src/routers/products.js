@@ -4,6 +4,7 @@ const { userAuth } = require("../middleware/Auth");
 const { validateProductsData, validateMongoID } = require("../utils/validate");
 const { productModel } = require("../models/product");
 const { categoriesModel } = require("../models/category");
+const { default: mongoose } = require("mongoose");
 
 const productsRouter = express.Router();
 
@@ -25,43 +26,24 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
     }
 
     const isValidCategory = await categoriesModel.findOne({ _id: category });
-
     if (!isValidCategory) {
-      throw new Error("Invalid Category!");
+      return res.status(404).json({ error: "Category not found!" });
     }
 
     const products = new productModel({
       title: title,
       description: description,
-      price: price,
-      stock: stock,
+      price: Number(price),
+      stock: Number(stock),
       image: image,
       category: category,
     });
 
     const savedProducts = await products.save();
 
-    res.json({
-      message: "Products",
+    return res.json({
+      message: "Product created successfully!",
       data: savedProducts,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /products (show all listed products, no specific filter)
-productsRouter.get("/products", async (req, res, next) => {
-  try {
-    const allProducts = await productModel
-      .find()
-      .select("title description price stock image category")
-      .populate("category");
-
-    res.json({
-      message: "List of all products!",
-      count: allProducts.length,
-      products: allProducts,
     });
   } catch (err) {
     next(err);
@@ -80,6 +62,11 @@ productsRouter.get("/products", async (req, res, next) => {
       sortBy = "createdAt",
       search,
     } = req.query;
+
+    const isValidCategory = await categoriesModel.findOne({ _id: category });
+    if (!isValidCategory) {
+      return res.status(404).json({ error: "Category not found!" });
+    }
 
     page = parseInt(page) || 1;
 
@@ -102,12 +89,21 @@ productsRouter.get("/products", async (req, res, next) => {
       filter.category = category;
     }
 
+    minPrice = Number(minPrice);
+    maxPrice = Number(maxPrice);
     if (minPrice && maxPrice) filter.price = { $gte: minPrice, $lte: maxPrice };
     else if (minPrice) filter.price = { $gte: minPrice };
     else if (maxPrice) filter.price = { $lte: maxPrice };
 
     if (search) {
-      filter.title = { $regex: search, $options: "i" };
+      filter.$or = [
+        {
+          title: { $regex: search, $options: "i" },
+        },
+        {
+          description: { $regex: search, $options: "i" },
+        },
+      ];
     }
 
     const products = await productModel
@@ -118,7 +114,7 @@ productsRouter.get("/products", async (req, res, next) => {
 
     const total = await productModel.countDocuments(filter);
 
-    res.json({
+    return res.json({
       message: "Filtered Products!",
       total,
       page: Number(page),
@@ -152,7 +148,7 @@ productsRouter.get("/products/:id", async (req, res, next) => {
       throw new Error("Invalid Product ID!");
     }
 
-    res.json({
+    return res.json({
       message: "Product Found Successfully!",
       product: foundProduct,
     });
@@ -168,16 +164,25 @@ productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
     const { id } = req.params;
     validateMongoID(id);
 
-    const foundProduct = await productModel.findByIdAndUpdate(id, {
-      title: title,
-      description: description,
-      price: price,
-      stock: stock,
-      image: image,
-      category: category,
-    });
+    const isAdmin = req.user.role === "admin" ? true : false;
+    if (!isAdmin) {
+      throw new Error("You aren't Authorized to update products!");
+    }
 
-    res.json({
+    const foundProduct = await productModel.findByIdAndUpdate(
+      id,
+      {
+        title: title,
+        description: description,
+        price: price,
+        stock: stock,
+        image: image,
+        category: category,
+      },
+      { new: true, runValidators: true }
+    );
+
+    return res.json({
       message: "Product Updated Successfully!",
     });
   } catch (err) {
@@ -192,7 +197,7 @@ productsRouter.delete("/products/:id", userAuth, async (req, res, next) => {
 
     const foundProduct = await productModel.findByIdAndDelete(id);
 
-    res.json({
+    return res.json({
       message: "Product deleted Successfully!",
     });
   } catch (err) {
