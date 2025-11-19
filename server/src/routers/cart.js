@@ -1,6 +1,4 @@
 const express = require("express");
-3;
-2;
 const validator = require("validator");
 
 const { userAuth } = require("../middleware/Auth");
@@ -24,12 +22,12 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
     }
 
     const qty = Number(quantity);
-    if (!qty || qty < 1) {
+    if (!qty || qty < 1 || !Number.isInteger(qty)) {
       throw new Error("Invalid Quantity!");
     }
 
     //   Checking if product already exists in cart or not
-    const existanceOfItemInCart = user.cart.find((item) => {
+    const existingItem = user.cart.find((item) => {
       return item.productId.toString() === productId.toString();
     });
 
@@ -43,20 +41,20 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
       );
     }
 
-    if (existanceOfItemInCart) {
+    if (existingItem) {
       // if the item exists then add new quantity with old existing quantity
-      existanceOfItemInCart.quantity += Number(quantity);
+      existingItem.quantity += qty;
     } else {
       // if the item doesn't exist then push that new product to cart
       user.cart.push({
-        productId: productId,
-        quantity: quantity,
+        productId,
+        quantity: qty,
       });
     }
 
     await user.save();
 
-    res.json({
+    return res.json({
       message: "Cart Updated Successfully!",
       cart: user.cart,
     });
@@ -79,11 +77,11 @@ cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
     }
 
     const nqty = Number(newQuantity);
-    if (!nqty || nqty < 1) {
+    if (!nqty || nqty < 1 || !Number.isInteger(nqty)) {
       throw new Error("Invalid Quantity!");
     }
 
-    if (!nqty > availableProduct.stock) {
+    if (nqty > availableProduct.stock) {
       throw new Error(
         `Only ${availableProduct.stock} items available in stock. You requested ${nqty}.`
       );
@@ -93,19 +91,19 @@ cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
       throw new Error("Cart is Empty!");
     }
 
-    const existanceOfItemInCart = user.cart.find((item) => {
+    const existingItem = user.cart.find((item) => {
       return item.productId.toString() === productId.toString();
     });
 
-    if (!existanceOfItemInCart) {
+    if (!existingItem) {
       throw new Error("Item doesn't exist in Cart!");
     }
 
-    existanceOfItemInCart.quantity = newQuantity;
+    existingItem.quantity = nqty;
 
     await user.save();
 
-    res.json({
+    return res.json({
       message: "Cart updated Successfully!",
       cart: user.cart,
     });
@@ -124,11 +122,11 @@ cartRouter.delete(
 
       validateMongoID(productId);
 
-      const existanceOfItemInCart = user.cart.find((item) => {
+      const existingItem = user.cart.find((item) => {
         return item.productId.toString() === productId.toString();
       });
 
-      if (!existanceOfItemInCart) {
+      if (!existingItem) {
         throw new Error("Item doesn't exist in the Cart!");
       }
 
@@ -138,7 +136,7 @@ cartRouter.delete(
 
       await user.save();
 
-      res.json({
+      return res.json({
         message: "Product Removed Successfully!",
         cart: user.cart,
       });
