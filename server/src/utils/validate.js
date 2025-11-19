@@ -1,20 +1,22 @@
 const validator = require("validator");
 
 const validateSignupData = (req) => {
-  const { name, email, password, role, cart } = req.body;
+  const { name, email, password } = req.body;
 
-  if (!name) {
+  if (!name || String(name).trim().length < 2) {
     throw new Error("Name not valid!");
-  } else if (!validator.isEmail(email)) {
+  }
+  if (!email || !validator.isEmail(String(email))) {
     throw new Error("Email not valid!");
-  } else if (!validator.isStrongPassword(password)) {
+  }
+  if (!password || !validator.isStrongPassword(String(password))) {
     throw new Error("Password is not strong!");
   }
 };
 
 const validateNewCategoriesData = (req) => {
   const { name } = req.body;
-  if (!name || name.toString().length < 2) {
+  if (!name || String(name).trim().length < 2) {
     throw new Error("Invalid Category name");
   }
 };
@@ -22,25 +24,35 @@ const validateNewCategoriesData = (req) => {
 const validateMongoID = (id) => {
   if (!id) {
     throw new Error("Invalid MongoID!");
-  } else if (!validator.isMongoId(id.toString())) {
+  }
+  if (!validator.isMongoId(String(id))) {
     throw new Error("Invalid MongoID!");
   }
 };
 
 const validateProductsData = (req) => {
   const { title, description, price, stock, image, category } = req.body;
-  if (!title) {
+  if (!title || String(title).trim().length < 1) {
     throw new Error("Invalid Title!");
-  } else if (!description) {
+  }
+  if (!description || String(description).trim().length < 5) {
     throw new Error("Invalid Description!");
-  } else if (!validator.isNumeric(price) || !price) {
+  }
+
+  const p = Number(price);
+  if (!Number.isFinite(p) || p < 0) {
     throw new Error("Invalid Price!");
-  } else if (!validator.isNumeric(stock)) {
+  }
+
+  const s = Number(stock);
+  if (!Number.isInteger(s) || s < 0) {
     throw new Error("Invalid Stock!");
-  } else if (!validator.isURL(image)) {
+  }
+  if (!image || !validator.isURL(String(image))) {
     throw new Error("Invalid Image URL!");
-  } else if (!validator.isMongoId(category)) {
-    throw new Error("Invalid MongoID!");
+  }
+  if (!category || !validator.isMongoId(String(category))) {
+    throw new Error("Invalid Category ID!");
   }
 };
 
@@ -50,8 +62,9 @@ const validateOrderStatus = (req) => {
   const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
 
   if (!orderStatus) {
-    throw new Error("No status has given!");
-  } else if (!validOrderStatus.includes(orderStatus)) {
+    throw new Error("No status provided!");
+  }
+  if (!validOrderStatus.includes(String(orderStatus))) {
     throw new Error("Invalid Order Status!");
   }
 };
