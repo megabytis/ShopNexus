@@ -66,7 +66,7 @@ cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
 cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
   try {
     const user = req.user;
-    const { productId, newQuantity } = req.body;
+    const { productId, quantity } = req.body;
 
     validateMongoID(productId);
 
@@ -76,7 +76,7 @@ cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
       throw new Error("Invalid Product ID!");
     }
 
-    const nqty = Number(newQuantity);
+    const nqty = Number(quantity);
     if (!nqty || nqty < 1 || !Number.isInteger(nqty)) {
       throw new Error("Invalid Quantity!");
     }
@@ -200,7 +200,7 @@ cartRouter.get("/cart", userAuth, async (req, res, next) => {
           : "Cart",
       totalItems: Number(totalItems),
       totalQuantity: Number(totalQuantity),
-      totalAmount: Number(totalAmount),
+      totalAmount: parseFloat(totalAmount.toFixed(2)),
       removedCartItems: cartDetails.cart.length - validCartItems.length,
       cart: validCartItems,
     });

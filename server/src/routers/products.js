@@ -60,7 +60,7 @@ productsRouter.get("/products", async (req, res, next) => {
       min,
       max,
       page = 1,
-      limit = 10,
+      limit = 12,
       sortBy = "createdAt",
       search,
     } = req.query;
@@ -79,7 +79,7 @@ productsRouter.get("/products", async (req, res, next) => {
 
     page = parseInt(page) || 1;
 
-    const MAX_LIMIT = 10;
+    const MAX_LIMIT = 12;
     limit = parseInt(limit) || MAX_LIMIT;
     limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
 

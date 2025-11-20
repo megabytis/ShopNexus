@@ -68,7 +68,7 @@ checkoutRouter.post("/checkout/summary", userAuth, async (req, res, next) => {
     }
     res.json({
       message: "Checkout Summary!",
-      amount: Number(totalAmount),
+      amount: parseFloat(totalAmount.toFixed(2)),
       currency: "INR",
       totalItems: cartDetails.cart.length,
     });
@@ -130,13 +130,15 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
 
     const { shippingAddress } = req.body;
 
+    console.log('Received shippingAddress:', shippingAddress);
+
     if (!shippingAddress ||
-      !shippingAddress.fullName ||
-      !shippingAddress.addressLine1 ||
-      !shippingAddress.city ||
-      !shippingAddress.state ||
-      !shippingAddress.postalCode ||
-      !shippingAddress.country) {
+      !shippingAddress.fullName?.trim() ||
+      !shippingAddress.addressLine1?.trim() ||
+      !shippingAddress.city?.trim() ||
+      !shippingAddress.state?.trim() ||
+      !shippingAddress.postalCode?.trim() ||
+      !shippingAddress.country?.trim()) {
       throw new Error("Please provide a complete shipping address!");
     }
 
@@ -144,7 +146,7 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
     const newOrder = await orderModel.create({
       userId: user._id,
       items: orderItems,
-      totalAmount: Number(totalAmount),
+      totalAmount: parseFloat(totalAmount.toFixed(2)),
       paymentStatus: "paid",
       orderStatus: "processing",
       shippingAddress,

@@ -38,6 +38,30 @@ export default function Checkout() {
         fetchSummary();
     }, [navigate]);
 
+    const validatePostalCode = (postalCode, country) => {
+        const patterns = {
+            'India': /^[1-9][0-9]{5}$/,
+            'United States': /^\d{5}(-\d{4})?$/,
+            'United Kingdom': /^[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}$/i,
+            'Canada': /^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/i,
+            'Australia': /^\d{4}$/,
+            'Germany': /^\d{5}$/,
+            'France': /^\d{5}$/,
+            'Japan': /^\d{3}-?\d{4}$/,
+            'China': /^\d{6}$/,
+            'Brazil': /^\d{5}-?\d{3}$/,
+            'Mexico': /^\d{5}$/,
+            'Singapore': /^\d{6}$/,
+            'United Arab Emirates': /^\d{5}$/,
+            'Saudi Arabia': /^\d{5}$/,
+            'South Africa': /^\d{4}$/,
+        };
+
+        const pattern = patterns[country];
+        if (!pattern) return true; // If country not in list, skip validation
+        return pattern.test(postalCode.trim());
+    };
+
     const handlePayment = async () => {
         setProcessing(true);
         // Validate Address
@@ -47,8 +71,15 @@ export default function Checkout() {
             return;
         }
 
+        // Validate Postal Code Format
+        if (!validatePostalCode(shippingAddress.postalCode, shippingAddress.country)) {
+            toast.error(`Invalid postal code format for ${shippingAddress.country}. Please check and try again.`);
+            setProcessing(false);
+            return;
+        }
+
         try {
-            await checkoutAPI.pay(shippingAddress);
+            await checkoutAPI.pay({ shippingAddress });
             toast.success('Payment successful! Order placed.');
             clearCart();
             navigate('/orders/my');
@@ -94,6 +125,7 @@ export default function Checkout() {
                             <input
                                 type="text"
                                 required
+                                placeholder="John Doe"
                                 className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 value={shippingAddress.fullName}
                                 onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
@@ -104,6 +136,7 @@ export default function Checkout() {
                             <input
                                 type="text"
                                 required
+                                placeholder="123 Main Street"
                                 className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 value={shippingAddress.addressLine1}
                                 onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
@@ -113,6 +146,7 @@ export default function Checkout() {
                             <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 2 (Optional)</label>
                             <input
                                 type="text"
+                                placeholder="Apartment, suite, etc."
                                 className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 value={shippingAddress.addressLine2}
                                 onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
@@ -124,6 +158,7 @@ export default function Checkout() {
                                 <input
                                     type="text"
                                     required
+                                    placeholder="New Delhi"
                                     className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     value={shippingAddress.city}
                                     onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
@@ -134,6 +169,7 @@ export default function Checkout() {
                                 <input
                                     type="text"
                                     required
+                                    placeholder="Delhi"
                                     className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     value={shippingAddress.state}
                                     onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
@@ -146,20 +182,53 @@ export default function Checkout() {
                                 <input
                                     type="text"
                                     required
+                                    placeholder={
+                                        shippingAddress.country === 'India' ? 'e.g., 110001' :
+                                            shippingAddress.country === 'United States' ? 'e.g., 12345' :
+                                                shippingAddress.country === 'United Kingdom' ? 'e.g., SW1A 1AA' :
+                                                    shippingAddress.country === 'Canada' ? 'e.g., K1A 0B1' :
+                                                        'Enter postal code'
+                                    }
                                     className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                     value={shippingAddress.postalCode}
                                     onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
                                 />
+                                {shippingAddress.country && (
+                                    <p className="text-xs text-secondary-500 mt-1">
+                                        {shippingAddress.country === 'India' && 'Format: 6 digits (e.g., 110001)'}
+                                        {shippingAddress.country === 'United States' && 'Format: 5 or 9 digits (e.g., 12345 or 12345-6789)'}
+                                        {shippingAddress.country === 'United Kingdom' && 'Format: UK postcode (e.g., SW1A 1AA)'}
+                                        {shippingAddress.country === 'Canada' && 'Format: A1A 1A1'}
+                                        {shippingAddress.country === 'Australia' && 'Format: 4 digits (e.g., 2000)'}
+                                        {!['India', 'United States', 'United Kingdom', 'Canada', 'Australia'].includes(shippingAddress.country) && 'Enter valid postal code for your country'}
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-secondary-700 mb-1">Country</label>
-                                <input
-                                    type="text"
+                                <select
                                     required
-                                    className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
                                     value={shippingAddress.country}
                                     onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
-                                />
+                                >
+                                    <option value="">Select Country</option>
+                                    <option value="India">India</option>
+                                    <option value="United States">United States</option>
+                                    <option value="United Kingdom">United Kingdom</option>
+                                    <option value="Canada">Canada</option>
+                                    <option value="Australia">Australia</option>
+                                    <option value="Germany">Germany</option>
+                                    <option value="France">France</option>
+                                    <option value="Japan">Japan</option>
+                                    <option value="China">China</option>
+                                    <option value="Brazil">Brazil</option>
+                                    <option value="Mexico">Mexico</option>
+                                    <option value="Singapore">Singapore</option>
+                                    <option value="UAE">United Arab Emirates</option>
+                                    <option value="Saudi Arabia">Saudi Arabia</option>
+                                    <option value="South Africa">South Africa</option>
+                                </select>
                             </div>
                         </div>
                     </form>
