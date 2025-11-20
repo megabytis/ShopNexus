@@ -48,8 +48,9 @@ export default function Navbar() {
             <motion.nav
                 initial={{ y: -100 }}
                 animate={{ y: 0 }}
+                style={{ zIndex: 9999 }}
                 className={clsx(
-                    "fixed top-0 left-0 right-0 z-[1000] transition-all duration-300",
+                    "fixed top-0 left-0 right-0 transition-all duration-300",
                     isScrolled ? "bg-white/80 backdrop-blur-md shadow-sm border-b border-secondary-200/50" : "bg-transparent"
                 )}
             >

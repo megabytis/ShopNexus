@@ -86,7 +86,7 @@ export default function Home() {
         <div className="min-h-screen">
             {/* Hero Section - Only show on first page with no filters */}
             {!search && !category && page === 1 && (
-                <section className="relative h-[600px] rounded-3xl overflow-hidden mb-16 mx-4 sm:mx-8 mt-4">
+                <section className="relative h-[600px] rounded-3xl overflow-hidden mb-16 mx-4 sm:mx-8 mt-24">
                     <div className="absolute inset-0 bg-gradient-to-r from-secondary-900 to-secondary-800">
                         <img
                             src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80"

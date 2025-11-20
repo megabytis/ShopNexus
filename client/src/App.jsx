@@ -17,15 +17,15 @@ function App() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Layout />}>
-                    {/* Public Routes */}
-                    <Route index element={<Home />} />
+                {/* Auth Routes - Standalone */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+
+                {/* Main Layout Routes */}
+                <Route element={<Layout />}>
+                    <Route path="/" element={<Home />} />
                     <Route path="products/:id" element={<ProductDetail />} />
                     <Route path="cart" element={<Cart />} />
-
-                    {/* Auth Routes */}
-                    <Route path="login" element={<Login />} />
-                    <Route path="signup" element={<Signup />} />
 
                     {/* Protected User Routes */}
                     <Route path="checkout" element={
@@ -50,10 +50,10 @@ function App() {
                             <AdminDashboard />
                         </ProtectedRoute>
                     } />
-
-                    {/* Catch all */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
+
+                {/* Catch all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </BrowserRouter>
     );

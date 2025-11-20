@@ -63,9 +63,12 @@ productsRouter.get("/products", async (req, res, next) => {
       search,
     } = req.query;
 
-    const isValidCategory = await categoriesModel.findOne({ _id: category });
-    if (!isValidCategory) {
-      return res.status(404).json({ error: "Category not found!" });
+    // Only validate category if it's provided
+    if (category) {
+      const isValidCategory = await categoriesModel.findOne({ _id: category });
+      if (!isValidCategory) {
+        return res.status(404).json({ error: "Category not found!" });
+      }
     }
 
     page = parseInt(page) || 1;
@@ -116,7 +119,8 @@ productsRouter.get("/products", async (req, res, next) => {
 
     return res.json({
       message: "Filtered Products!",
-      total,
+      totalProducts: total,
+      totalPages: Math.ceil(total / limit),
       page: Number(page),
       limit: Number(limit),
       products,
