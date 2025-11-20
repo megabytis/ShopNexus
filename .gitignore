@@ -1,0 +1,50 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Vite cache
+.vite/
+
+# TypeScript cache
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Editor files
+.vscode/
+.idea/
+
+# Replit leftover
+.replit
+upm/
+attached_assets/
+
+# Dependency locks (if you want clean installs — optional)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Temp archives or zips
+*.zip
+*.tar.gz
+
+# Generated files
+coverage/

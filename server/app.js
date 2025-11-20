@@ -4,20 +4,20 @@ const express = require("express");
 const cookieparser = require("cookie-parser");
 const cors = require("cors");
 
-const { connectDB } = require("./config/database");
+const { connectDB } = require("./src/config/database");
 
-const authRouter = require("./routers/auth");
-const categoriesRouter = require("./routers/categories");
-const productsRouter = require("./routers/products");
-const cartRouter = require("./routers/cart");
-const checkoutRouter = require("./routers/checkout");
-const orderRouter = require("./routers/orders");
+const authRouter = require("./src/routers/auth");
+const categoriesRouter = require("./src/routers/categories");
+const productsRouter = require("./src/routers/products");
+const cartRouter = require("./src/routers/cart");
+const checkoutRouter = require("./src/routers/checkout");
+const orderRouter = require("./src/routers/orders");
 
 const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "*"],
+    origin: ["http://localhost:5173", "*"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
   })
