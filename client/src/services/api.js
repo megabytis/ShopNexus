@@ -61,7 +61,7 @@ export const cartAPI = {
 
 export const checkoutAPI = {
     summary: () => api.post('/checkout/summary'),
-    pay: () => api.post('/checkout/pay'),
+    pay: (data) => api.post('/checkout/pay', data),
 };
 
 export const ordersAPI = {

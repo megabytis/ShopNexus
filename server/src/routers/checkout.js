@@ -33,23 +33,37 @@ checkoutRouter.post("/checkout/summary", userAuth, async (req, res, next) => {
       });
     }
 
-    // verifying each product and calculating total Amount
-    for (const item of cartDetails.cart) {
-      const availableProduct = item.productId;
+    // Filter out items where product no longer exists
+    const validItems = cartDetails.cart.filter(item => item.productId);
 
-      if (!availableProduct) {
-        throw new Error("Product no longer Exists!");
-      }
+    // If items were removed, update the cart
+    if (validItems.length < cartDetails.cart.length) {
+      cartDetails.cart = validItems;
+      await cartDetails.save();
+    }
+
+    if (validItems.length === 0) {
+      return res.json({
+        message: "Cart is Empty (Invalid items removed)!",
+        amount: 0,
+        currency: "INR",
+        totalItems: 0,
+      });
+    }
+
+    // verifying each product and calculating total Amount
+    let totalAmount = 0;
+    for (const item of validItems) {
+      const availableProduct = item.productId;
 
       // checking if stock is available or not
       if (availableProduct.stock < item.quantity) {
         throw new Error(
-          `Product if out of Stock! \n ${availableProduct.title}`
+          `Product is out of Stock! \n ${availableProduct.title}`
         );
       }
 
       // Total Amount
-      let totalAmount = 0;
       totalAmount += Number(availableProduct.price * item.quantity);
     }
     res.json({
@@ -114,6 +128,18 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
       });
     }
 
+    const { shippingAddress } = req.body;
+
+    if (!shippingAddress ||
+      !shippingAddress.fullName ||
+      !shippingAddress.addressLine1 ||
+      !shippingAddress.city ||
+      !shippingAddress.state ||
+      !shippingAddress.postalCode ||
+      !shippingAddress.country) {
+      throw new Error("Please provide a complete shipping address!");
+    }
+
     // Creating Order
     const newOrder = await orderModel.create({
       userId: user._id,
@@ -121,6 +147,7 @@ checkoutRouter.post("/checkout/pay", userAuth, async (req, res, next) => {
       totalAmount: Number(totalAmount),
       paymentStatus: "paid",
       orderStatus: "processing",
+      shippingAddress,
     });
 
     // Deducting stock for each product

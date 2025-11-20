@@ -1,6 +1,7 @@
 // seed.js
 
-require("dotenv").config({ path: "../.env" });
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 const mongoose = require("mongoose");
 const { faker } = require("@faker-js/faker");
@@ -26,20 +27,30 @@ async function connectDB() {
 
 // ---------------- CLEAR OLD DATA ------------------
 async function clearOldData() {
-    await categoriesModel.deleteMany({});
-    await productModel.deleteMany({});
-    await userModel.deleteMany({});
-    console.log("🗑 Old data cleared");
+    try {
+        // Drop collections to ensure old indexes (like unique password) are removed
+        await mongoose.connection.db.dropCollection("categories").catch(() => { });
+        await mongoose.connection.db.dropCollection("products").catch(() => { });
+        await mongoose.connection.db.dropCollection("users").catch(() => { });
+        console.log("🗑 Old data and indexes cleared");
+    } catch (error) {
+        console.log("Error clearing data:", error.message);
+    }
 }
 
 // ---------------- SEED CATEGORIES ------------------
 async function seedCategories() {
+    // Use a fixed list of distinct categories to avoid duplicates
+    const categoryNames = [
+        "Electronics", "Fashion", "Home & Garden", "Sports",
+        "Toys & Hobbies", "Health & Beauty", "Automotive",
+        "Books", "Music", "Computers", "Pet Supplies", "Office"
+    ];
+
     let categories = [];
 
-    for (let i = 0; i < 10; i++) {
-        categories.push({
-            name: faker.commerce.department(),
-        });
+    for (const name of categoryNames) {
+        categories.push({ name });
     }
 
     const created = await categoriesModel.insertMany(categories);
@@ -50,10 +61,10 @@ async function seedCategories() {
 // ---------------- SEED USERS ------------------
 async function seedUsers() {
     let users = [];
-
     const hashedPass = await bcrypt.hash("Password123@", 10);
 
-    for (let i = 0; i < 10; i++) {
+    // Create 20 random users
+    for (let i = 0; i < 20; i++) {
         users.push({
             name: faker.person.fullName(),
             email: faker.internet.email(),
@@ -81,14 +92,15 @@ async function seedUsers() {
 async function seedProducts(categories) {
     let products = [];
 
-    for (let i = 0; i < 50; i++) {
+    // Create 200 products
+    for (let i = 0; i < 200; i++) {
         const category = faker.helpers.arrayElement(categories);
 
         products.push({
             title: faker.commerce.productName(),
             description: faker.commerce.productDescription(),
-            price: Number(faker.commerce.price({ min: 100, max: 50000 })),
-            stock: faker.number.int({ min: 5, max: 100 }),
+            price: Number(faker.commerce.price({ min: 10, max: 2000 })),
+            stock: faker.number.int({ min: 0, max: 100 }),
             image: faker.image.urlLoremFlickr({ category: "product" }),
             category: category._id,
         });

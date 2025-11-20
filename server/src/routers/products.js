@@ -57,11 +57,17 @@ productsRouter.get("/products", async (req, res, next) => {
       category,
       minPrice,
       maxPrice,
+      min,
+      max,
       page = 1,
       limit = 10,
       sortBy = "createdAt",
       search,
     } = req.query;
+
+    // Map min/max to minPrice/maxPrice if provided
+    if (min) minPrice = min;
+    if (max) maxPrice = max;
 
     // Only validate category if it's provided
     if (category) {
@@ -109,8 +115,23 @@ productsRouter.get("/products", async (req, res, next) => {
       ];
     }
 
+    // Sorting Logic
+    const sortOptions = {};
+    if (sortBy === "createdAt") {
+      sortOptions.createdAt = -1; // Newest first
+    } else if (sortBy === "price") {
+      sortOptions.price = 1; // Low to High
+    } else if (sortBy === "-price") {
+      sortOptions.price = -1; // High to Low
+    } else if (sortBy === "title") {
+      sortOptions.title = 1; // A-Z
+    } else {
+      sortOptions.createdAt = -1; // Default
+    }
+
     const products = await productModel
       .find(filter)
+      .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .populate("category", "name");
