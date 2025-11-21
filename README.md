@@ -1,163 +1,138 @@
-# 🛒 ShopNexus — Full-Stack eCommerce App (MERN + Production-Ready Auth)
+# 🛒 ShopNexus — Full-Stack E-Commerce Platform (Production Ready)
 
-![Demo](./ezgif-2cedf44d708d1d82.gif)
+A fully featured e-commerce application built with a clean MERN architecture, real authentication, scalable backend routing, secure cookie-based login, advanced filtering, checkout logic, and complete deployment across Render + Vercel + MongoDB Atlas.
 
-ShopNexus is a fully-functional, production-grade eCommerce platform built with a clean MERN architecture, JWT-based authentication, cart system, filtering, categories, checkout workflow, and real deployment setup using Vercel + Render + MongoDB Atlas.
-
-This isn’t a “tutorial project” — it’s a complete, real-world build.
+This project reflects **industry-standard practices**, not tutorial code.
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Live Project
 
 Frontend: https://shop-nexus-beta.vercel.app  
-Backend API: https://shopnexus-vyrv.onrender.com  
+Backend: https://shopnexus-vyrv.onrender.com  
+
+---
+
+## 🎥 Project Preview
+
+![Demo](./ezgif-2cedf44d708d1d82.gif)
+
+---
+
+## 🔥 Key Highlights (Recruiter-Focused)
+
+- **Secure, production-ready auth** using JWT + HttpOnly cookies  
+- **Cross-site cookie compatibility** with Chrome’s latest `Partitioned` requirement  
+- **Modular Express routing** with clean MVC-style separation  
+- **Functional cart system** with state sync + persistent backend  
+- **Fully validated checkout flow**  
+- **Admin controls** for products, categories, and order management  
+- **Advanced order filtering** (date range, amounts, product-based, user-based, pagination)  
+- **Seed script for real data** using Faker.js  
+- **Cloud-deployed & scalable** architecture  
+- **No hardcoded hacks, no shortcuts** — genuinely production-grade logic  
 
 ---
 
 ## 🔧 Tech Stack
 
-### **Frontend**
-- React + Vite  
-- Custom UI / modern component structure  
-- Axios (withCredentials)  
-- React Query + Context API  
-- Toast notifications  
-- Protected routes & state management  
+### Frontend (Vite + React)
+- React + Context API  
+- React Query  
+- Axios with credentials  
+- Tailored UI components  
+- Protected pages  
+- State-driven cart and auth  
 
-### **Backend**
-- Node.js + Express  
-- JWT Authentication with HttpOnly + Secure + SameSite=None cookies  
-- Authorization guard middleware  
-- Modular routers (auth, products, categories, cart, checkout, orders)  
-- Mongoose models + validators  
-- CORS configured for production  
-- Seed script with Faker.js  
+### Backend (Node + Express)
+- Express Routers  
+- JWT Auth + Cookies  
+- Custom middlewares  
+- Robust validation layer  
+- Pagination + Filtering  
+- Mongoose ODM  
 
-### **Database**
-- MongoDB Atlas (Cloud)  
-- Structured category/product/user collections  
-- Seeded product & category data  
-
-### **Deployment**
+### DevOps
 - **Frontend:** Vercel  
 - **Backend:** Render  
-- **DB:** MongoDB Atlas  
-- Fully configured cookie policy for cross-site auth  
+- **Database:** MongoDB Atlas  
+- CORS configured for production  
+- Environment-based configuration (`NODE_ENV`, secrets, URLs)  
 
 ---
 
-## 🛍 Features
+## 🛍 Main Features
 
-### 🔐 Authentication
-- Signup, Login, Logout  
-- HttpOnly secure cookies (production-ready)  
-- `/auth/me` session check  
-- JWT with 1-day expiry  
+### Users
+- Signup / Login / Logout  
+- Auto session check  
+- Secure cookie token  
+- No token exposure in frontend  
 
-### 🛒 E-Commerce Core
-- Add to cart / update / remove  
-- Quantity management  
-- Product filtering: category, price range, search  
-- Pagination  
-- Sorting  
+### Products
+- Listing with pagination  
+- Sorting + price range filtering  
+- Search  
+- Category-based browsing  
 
-### 📦 Checkout System
-- Summary validation  
-- Stock verification  
+### Cart
+- Add / Update / Remove items  
+- Stock validation in backend  
+- Cart sync with backend  
+
+### Checkout + Orders
+- Multi-step validation  
+- Fake payment logic  
 - Order creation  
-- Cart clearing  
-- Stock deduction  
-
-### 📊 Admin Features
-- Add / update / delete categories  
-- Add / update / delete products  
-- Update order status  
-- Advanced order filtering with params  
+- Admin-only status update  
+- Full order filters for dashboards  
 
 ---
 
-## 📁 Folder Structure (Clean & Scalable)
+## 📂 Project Architecture
 
 ```
 ShopNexus/
- ├── client/        # React frontend (Vite)
- └── server/        # Node.js + Express backend
+ ├── client/     # React + Vite frontend
+ └── server/     # Node.js backend
+      ├── routers/
+      ├── models/
+      ├── middleware/
+      ├── utils/
+      └── config/
 ```
 
-Backend structure:
-
-```
-server/
- ├── app.js
- ├── src/
- │   ├── routers/
- │   ├── models/
- │   ├── middleware/
- │   ├── config/
- │   ├── utils/
- │   └── seed.js
-```
+Every module is designed for clarity, reusability, and maintainability.
 
 ---
 
-## 🧪 API Endpoints (Highlights)
+## 🧠 Engineering Learnings
 
-### Auth  
-POST `/auth/signup`  
-POST `/auth/login`  
-POST `/auth/logout`  
-GET `/auth/me`
-
-### Products  
-GET `/products`  
-POST `/products` (admin)  
-PUT `/products/:id`  
-DELETE `/products/:id`
-
-### Cart  
-GET `/cart`  
-POST `/cart/add`  
-PUT `/cart/update`  
-DELETE `/cart/remove/:productId`
-
-### Checkout  
-POST `/checkout/summary`  
-POST `/checkout/pay`
-
-### Orders  
-GET `/orders/my`  
-GET `/orders` (admin)  
-PUT `/orders/:id/status`
+- Handling authentication across different domains (Chrome cross-site cookies)
+- Working with secure cookies + SameSite policies  
+- Designing REST APIs with multiple filters  
+- Optimizing MongoDB queries  
+- Structuring backend logic using MVC patterns  
+- Debugging CORS systematically  
+- Deployment workflows for frontend + backend  
+- Designing scalable folder structures  
+- Building real-world e-commerce logic (stock, orders, checkout)  
 
 ---
 
-## 🎯 What I Learned
-
-- Real-world **cookie-based auth** in production  
-- Debugging **Chrome’s new partitioned cookie rules**  
-- CORS across multiple origins  
-- Efficient Express router structuring  
-- Building scalable backend systems  
-- Writing seed scripts for rapid data generation  
-- Vercel + Render deployment pipelines  
-
----
-
-## 🔮 Upcoming Enhancements
-
-- Razorpay / Stripe payments  
+## 🔮 Next Improvements
+- Razorpay/Stripe integration  
 - Admin dashboard UI  
-- Wishlist + reviews  
-- Better category filters  
-- Product recommendation system  
+- Review and wishlist system  
+- Improved SEO  
+- Better analytics + logging  
 
 ---
 
 ## 📬 Contact  
-If you're working on MERN stack or full-stack projects — let’s connect!  
-Happy to collaborate, help, or brainstorm ideas.
+Open to internships and full-time roles in backend or full-stack development.  
+Happy to share insights or collaborate on real-world projects.
 
 ---
 
-Made with ❤️ by Miku  
+Built with precision and shipped with persistence 🚀
