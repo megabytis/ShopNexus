@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 
 const { userModel } = require("../models/user");
 const { validateSignupData } = require("../utils/validate");
+const { userAuth } = require("../middleware/Auth");
 
 const authRouter = express.Router();
 
