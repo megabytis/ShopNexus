@@ -76,7 +76,7 @@ authRouter.post("/auth/login", async (req, res, next) => {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        path: "/",
+        partitioned: true, // ← REQUIRED FOR 2025 Chrome
         maxAge: 24 * 60 * 60 * 1000,
       });
 
@@ -101,7 +101,9 @@ authRouter.post("/auth/logout", async (req, res, next) => {
     httpOnly: true,
     secure: true,
     sameSite: "none",
+    partitioned: true,
   });
+
   res.json({
     message: "Logged Out Successfully!",
   });
