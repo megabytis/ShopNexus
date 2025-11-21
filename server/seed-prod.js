@@ -10,8 +10,8 @@ const { userModel } = require("./src/models/user");
 const { categoriesModel } = require("./src/models/category");
 
 // Hardcoded connection string for production seeding
-// This allows running the script locally but targeting the production DB
-const MONGO_URI = "mongodb+srv://madhusudanbhukta:madhu123@cluster0.z2k5l.mongodb.net/shopnexus?retryWrites=true&w=majority&appName=Cluster0";
+// This connects to YOUR MongoDB Atlas cluster (same as Render)
+const MONGO_URI = "mongodb+srv://shopNexus:Y5pUFcP4Tessjkfe@shopnexus.1zewbn1.mongodb.net/shopDB?retryWrites=true&w=majority&appName=ShopNexus";
 
 // ---------------- CONNECT DB ------------------
 async function connectDB() {
