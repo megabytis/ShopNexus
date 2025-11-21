@@ -18,11 +18,11 @@ const app = express();
 app.use(
   cors({
     origin: [
-      //"http://localhost:5173", // Local development
-      "https://shop-nexus-beta.vercel.app", // Production frontend
+      process.env.FRONTEND_URL,
+      "http://localhost:5173", // Local development
     ],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   })
 );
 
