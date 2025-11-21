@@ -23,14 +23,6 @@ app.use(
   })
 );
 
-app.options(
-  "*",
-  cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
-  })
-);
-
 app.use(express.json());
 app.use(cookieparser());
 
