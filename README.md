@@ -8,8 +8,7 @@ This project reflects **industry-standard practices**, not tutorial code.
 
 ## 🚀 Live Project
 
-Frontend: https://shop-nexus-beta.vercel.app  
-Backend: https://shopnexus-vyrv.onrender.com  
+Frontend: https://shop-nexus-beta.vercel.app
 
 ---
 
