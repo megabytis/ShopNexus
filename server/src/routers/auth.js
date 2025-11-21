@@ -71,8 +71,8 @@ authRouter.post("/auth/login", async (req, res, next) => {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: isProd,
-        sameSite: isProd ? "none" : "lax",
+        secure: true, // Always true for cross-site cookies
+        sameSite: "none", // Required for cross-site cookies
         maxAge: 24 * 60 * 60 * 1000,
       });
 
@@ -95,8 +95,8 @@ authRouter.post("/auth/login", async (req, res, next) => {
 authRouter.post("/auth/logout", async (req, res, next) => {
   res.clearCookie("token", {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    secure: true,
+    sameSite: "none",
   });
   res.json({
     message: "Logged Out Successfully!",
