@@ -76,6 +76,7 @@ authRouter.post("/auth/login", async (req, res, next) => {
         httpOnly: true,
         secure: isProd, // only true on render
         sameSite: isProd ? "none" : "lax",
+        path: "/",
         maxAge: 24 * 60 * 60 * 1000,
       });
 
