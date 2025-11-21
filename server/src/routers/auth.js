@@ -74,8 +74,8 @@ authRouter.post("/auth/login", async (req, res, next) => {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: isProd, // only true on render
-        sameSite: isProd ? "none" : "lax",
+        secure: true,
+        sameSite: "none",
         path: "/",
         maxAge: 24 * 60 * 60 * 1000,
       });
@@ -109,11 +109,10 @@ authRouter.post("/auth/logout", async (req, res, next) => {
 
 authRouter.get("/auth/me", userAuth, (req, res) => {
   res.json({
-    user: {
+    userData: {
       _id: req.user._id,
       name: req.user.name,
       email: req.user.email,
-      role: req.user.role,
     },
   });
 });
