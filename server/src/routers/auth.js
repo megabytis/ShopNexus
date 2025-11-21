@@ -69,10 +69,12 @@ authRouter.post("/auth/login", async (req, res, next) => {
         }
       );
 
+      const isProd = process.env.NODE_ENV === "production";
+
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true, // Always true for cross-site cookies
-        sameSite: "none", // Required for cross-site cookies
+        secure: isProd, // only true on render
+        sameSite: isProd ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000,
       });
 
@@ -100,6 +102,17 @@ authRouter.post("/auth/logout", async (req, res, next) => {
   });
   res.json({
     message: "Logged Out Successfully!",
+  });
+});
+
+authRouter.get("/auth/me", userAuth, (req, res) => {
+  res.json({
+    user: {
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+    },
   });
 });
 
