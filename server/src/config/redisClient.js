@@ -1,20 +1,27 @@
-const Redis = require("ioredis");
+const REDIS_HOST = process.env.REDIS_HOST;
+const REDIS_PORT = process.env.REDIS_PORT;
+const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
+const REDIS_USERNAME = process.env.REDIS_USERNAME;
+
+if (!REDIS_HOST || !REDIS_PORT || !REDIS_PASSWORD || !REDIS_USERNAME) {
+  throw new Error("Missing Redis Config: REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_USERNAME required")
+}
 
 const redisConfig = {
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
+  host: REDIS_HOST,
+  port: REDIS_PORT,
+  username: REDIS_USERNAME,
+  password: REDIS_PASSWORD,
 };
 
+// Creating Client
+const Redis = require("ioredis");
 const redis = new Redis(redisConfig);
 
-redis.on("error", (err) => {
-  console.error("Redis connection error:", err);
-});
-
-redis.on("connect", () => {
-  console.log("Connected to Redis");
-});
+// Events
+redis.on("connect", () => console.log("✅ Redis connected"));
+redis.on('ready', () => console.log("⚡ Redis ready for Commands"))
+redis.on("error", (err) => console.error("❌ Redis connection error:", err.message));
+redis.on("end", () => console.log("🔴 Redis connection closed"));
 
 module.exports = { redis };
