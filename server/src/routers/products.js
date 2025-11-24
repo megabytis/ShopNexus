@@ -4,7 +4,8 @@ const { userAuth } = require("../middleware/Auth");
 const { validateProductsData, validateMongoID } = require("../utils/validate");
 const { productModel } = require("../models/product");
 const { categoriesModel } = require("../models/category");
-const { default: mongoose } = require("mongoose");
+const { buildKey } = require("../utils/keyGenerator");
+const { getCache, setCache, removeCache } = require("../utils/cache");
 
 const productsRouter = express.Router();
 
@@ -129,6 +130,22 @@ productsRouter.get("/products", async (req, res, next) => {
       sortOptions.createdAt = -1; // Default
     }
 
+    // Adding Redis Caching
+    const key = buildKey("products:list", {
+      page,
+      limit,
+      sortBy,
+      min: minPrice || 0,
+      max: maxPrice || 99999,
+      category,
+      search: search || "none",
+    });
+
+    const cachedProducts = await getCache(key);
+    if (cachedProducts) {
+      return res.json(cachedProducts);
+    }
+
     const products = await productModel
       .find(filter)
       .sort(sortOptions)
@@ -138,14 +155,18 @@ productsRouter.get("/products", async (req, res, next) => {
 
     const total = await productModel.countDocuments(filter);
 
-    return res.json({
+    const responseData = {
       message: "Filtered Products!",
       totalProducts: total,
       totalPages: Math.ceil(total / limit),
       page: Number(page),
       limit: Number(limit),
       products,
-    });
+    };
+
+    await setCache(key, responseData, 60);
+
+    return res.json(responseData);
   } catch (err) {
     next(err);
   }
