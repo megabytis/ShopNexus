@@ -6,6 +6,8 @@ const {
   validateNewCategoriesData,
   validateMongoID,
 } = require("../utils/validate");
+const { getCache, setCache, removeCache } = require("../utils/cache");
+const { buildKey } = require("../utils/keyGenerator");
 
 const categoriesRouter = express.Router();
 
@@ -32,7 +34,9 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
     });
     const savedCategory = await category.save();
 
-    res.json({
+    await removeCache(buildKey("categories"));
+
+    return res.json({
       message: "New category Created!",
       data: savedCategory,
     });
@@ -43,8 +47,18 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
 
 categoriesRouter.get("/categories", async (req, res, next) => {
   try {
+    const key = buildKey("categories");
+    const availableCategories = await getCache(key);
+    if (availableCategories) {
+      return res.json({
+        message: "Categories",
+        data: availableCategories,
+      });
+    }
+
     const categoriesNames = await categoriesModel.find().select("name");
-    res.json({
+    await setCache(key, categoriesNames);
+    return res.json({
       message: "Categories",
       data: categoriesNames,
     });
@@ -74,7 +88,9 @@ categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
     cat.name = name;
     await cat.save();
 
-    res.json({
+    await removeCache(buildKey("categories"));
+
+    return res.json({
       message: "Category Modified Successfully! ",
       updatedCategory: cat,
     });
@@ -102,7 +118,9 @@ categoriesRouter.delete("/categories/:id", userAuth, async (req, res, next) => {
       _id: id.toString(),
     });
 
-    res.json({
+    await removeCache(buildKey("categories"));
+
+    return res.json({
       message: "Category Deleted Successfully! ",
       deletedCategory,
     });
