@@ -42,6 +42,8 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
 
     const savedProducts = await products.save();
 
+    await clearCache("products:list");
+
     return res.json({
       message: "Product created successfully!",
       data: savedProducts,
@@ -185,6 +187,12 @@ productsRouter.get("/products/:id", async (req, res, next) => {
 
     validateMongoID(id);
 
+    const key = buildKey("product:details", { id });
+    const cachedProducts = await getCache(key);
+    if (cachedProducts) {
+      return res.json(cachedProducts);
+    }
+
     const foundProduct = await productModel
       .findById(id)
       .select("title description price stock image category")
@@ -193,6 +201,8 @@ productsRouter.get("/products/:id", async (req, res, next) => {
     if (!foundProduct) {
       throw new Error("Invalid Product ID!");
     }
+
+    await setCache(key, foundProduct, 60);
 
     return res.json({
       message: "Product Found Successfully!",
@@ -215,6 +225,8 @@ productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
       throw new Error("You aren't Authorized to update products!");
     }
 
+    await clearCache("product:details", { id });
+
     const foundProduct = await productModel.findByIdAndUpdate(
       id,
       {
@@ -230,6 +242,7 @@ productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
 
     return res.json({
       message: "Product Updated Successfully!",
+      product: foundProduct,
     });
   } catch (err) {
     next(err);
@@ -243,8 +256,11 @@ productsRouter.delete("/products/:id", userAuth, async (req, res, next) => {
 
     const foundProduct = await productModel.findByIdAndDelete(id);
 
+    await clearCache("product:details", { id });
+
     return res.json({
       message: "Product deleted Successfully!",
+      product: foundProduct,
     });
   } catch (err) {
     next(err);
