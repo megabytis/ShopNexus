@@ -42,7 +42,7 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
 
     const savedProducts = await products.save();
 
-    await clearCache("products:list");
+    await removeCache("products:list");
 
     return res.json({
       message: "Product created successfully!",
@@ -225,7 +225,7 @@ productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
       throw new Error("You aren't Authorized to update products!");
     }
 
-    await clearCache("product:details", { id });
+    await removeCache("product:details", { id });
 
     const foundProduct = await productModel.findByIdAndUpdate(
       id,
@@ -256,7 +256,7 @@ productsRouter.delete("/products/:id", userAuth, async (req, res, next) => {
 
     const foundProduct = await productModel.findByIdAndDelete(id);
 
-    await clearCache("product:details", { id });
+    await removeCache("product:details", { id });
 
     return res.json({
       message: "Product deleted Successfully!",
