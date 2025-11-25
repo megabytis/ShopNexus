@@ -6,6 +6,8 @@ const { validateOrderStatus } = require("../utils/validate");
 const { userModel } = require("../models/user");
 const { productModel } = require("../models/product");
 const { default: mongoose } = require("mongoose");
+const { setCache, getCache, removeCache } = require("../utils/cache");
+const { buildKey } = require("../utils/keyGenerator");
 
 const orderRouter = express.Router();
 
@@ -13,6 +15,17 @@ const orderRouter = express.Router();
 orderRouter.get("/orders/my", userAuth, async (req, res, next) => {
   try {
     const user = req.user;
+
+    const key = buildKey("orders:my", { userId: user._id });
+    const cachedOrders = await getCache(key);
+    if (cachedOrders) {
+      return res.json({
+        message: "Orders fetched from cache!",
+        ordersLength: cachedOrders.length,
+        orders: cachedOrders,
+      });
+    }
+
     const foundOrder = await orderModel
       .find({ userId: user._id })
       .sort({ createdAt: -1 });
@@ -25,7 +38,9 @@ orderRouter.get("/orders/my", userAuth, async (req, res, next) => {
       });
     }
 
-    res.json({
+    await setCache(key, foundOrder);
+
+    return res.json({
       message: "Orders fetched!",
       ordersLength: foundOrder.length,
       orders: foundOrder,
@@ -54,6 +69,15 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
       throw new Error("Invalid OrderId!");
     }
 
+    const key = buildKey("order:details", { orderId: orderId });
+    const cachedOrders = await getCache(key);
+    if (cachedOrders) {
+      return res.json({
+        message: "Order fetched from cache!",
+        order: cachedOrders,
+      });
+    }
+
     const foundOrder = await orderModel.findById(orderId);
     if (!foundOrder) {
       throw new Error("Order not found!");
@@ -66,8 +90,10 @@ orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
       throw new Error("Access Denied! You can't view this order!");
     }
 
-    res.json({
-      messege: "Order Fetched!",
+    await setCache(key, foundOrder);
+
+    return res.json({
+      message: "Order Fetched!",
       order: foundOrder,
     });
   } catch (err) {
@@ -163,7 +189,7 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
         productId.toString()
       );
       if (isValidProductId) {
-        orderQuery["items.productId"] = mongoose.Types.ObjectId(productId);
+        orderQuery["items.productId"] = new mongoose.Types.ObjectId(productId);
       }
     }
 
@@ -227,6 +253,26 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
 
     const skip = (page - 1) * limit;
 
+    const key = buildKey("orders", {
+      page,
+      limit,
+      orderStatus,
+      paymentStatus,
+      min,
+      max,
+      from,
+      to,
+      userId,
+      productId,
+      sortBy,
+      order,
+    });
+
+    const cachedResponse = await getCache(key);
+    if (cachedResponse) {
+      return res.json(cachedResponse);
+    }
+
     const totalOrders = await orderModel.countDocuments(orderQuery);
     const totalPages = Math.ceil(totalOrders / limit);
 
@@ -240,14 +286,18 @@ orderRouter.get("/orders", userAuth, async (req, res, next) => {
       .skip(skip)
       .limit(limit);
 
-    res.json({
+    const responseData = {
       message: "All orders Fetched!",
       totalOrders,
       totalPages,
       page: Number(page),
       limit: Number(limit),
       allOrders,
-    });
+    };
+
+    await setCache(key, responseData, 60);
+
+    return res.json(responseData);
   } catch (err) {
     next(err);
   }
@@ -280,6 +330,14 @@ orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
       },
       { new: true }
     );
+
+    const orderDetailsKey = buildKey("order:details", { orderId: id });
+    const myOrdersKey = buildKey("orders:my", {
+      userId: foundOrder.userId.toString(),
+    });
+
+    await removeCache(orderDetailsKey);
+    await removeCache(myOrdersKey);
 
     res.json({
       message: "Order status Updated Successfully!",
