@@ -6,6 +6,7 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
       required: true,
+      index: true,
     },
     items: [
       {
@@ -29,11 +30,13 @@ const orderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       required: true,
+      index: true,
     },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],
       default: "pending",
+      index: true,
       validate(status) {
         const requiredStatus = ["pending", "paid", "failed"];
         if (!requiredStatus.includes(status)) {
@@ -45,6 +48,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["processing", "shipped", "delivered", "cancelled"],
       default: "processing",
+      index: true,
       validate(status) {
         const requiredStatus = [
           "processing",
@@ -69,6 +73,8 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+orderSchema.index({ createdAt: -1 });
 
 const orderModel = new mongoose.model("orders", orderSchema);
 
