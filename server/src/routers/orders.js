@@ -8,11 +8,12 @@ const { productModel } = require("../models/product");
 const { default: mongoose } = require("mongoose");
 const { setCache, getCache, removeCache } = require("../utils/cache");
 const { buildKey } = require("../utils/keyGenerator");
+const { userlimiter } = require("../utils/rateLimiter");
 
 const orderRouter = express.Router();
 
 // in /orders/my API, the particular logged in user (be it normal user or admin) can only see his/her personal orders, not of others
-orderRouter.get("/orders/my", userAuth, async (req, res, next) => {
+orderRouter.get("/orders/my", userAuth, userlimiter, async (req, res, next) => {
   try {
     const user = req.user;
 
@@ -61,47 +62,52 @@ If the logged-in user is an admin:
 - No restriction.
 
 */
-orderRouter.get("/orders/:id", userAuth, async (req, res, next) => {
-  try {
-    const user = req.user;
-    const orderId = req.params.id;
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      throw new Error("Invalid OrderId!");
-    }
+orderRouter.get(
+  "/orders/:id",
+  userAuth,
+  userlimiter,
+  async (req, res, next) => {
+    try {
+      const user = req.user;
+      const orderId = req.params.id;
+      if (!mongoose.Types.ObjectId.isValid(orderId)) {
+        throw new Error("Invalid OrderId!");
+      }
 
-    const key = buildKey("order:details", { orderId: orderId });
-    const cachedOrders = await getCache(key);
-    if (cachedOrders) {
+      const key = buildKey("order:details", { orderId: orderId });
+      const cachedOrders = await getCache(key);
+      if (cachedOrders) {
+        return res.json({
+          message: "Order fetched from cache!",
+          order: cachedOrders,
+        });
+      }
+
+      const foundOrder = await orderModel.findById(orderId);
+      if (!foundOrder) {
+        throw new Error("Order not found!");
+      }
+
+      const isAdmin = user.role === "admin";
+      const isOwnerOfTheOrderId =
+        foundOrder.userId.toString() === user._id.toString();
+      if (!isOwnerOfTheOrderId && !isAdmin) {
+        throw new Error("Access Denied! You can't view this order!");
+      }
+
+      await setCache(key, foundOrder);
+
       return res.json({
-        message: "Order fetched from cache!",
-        order: cachedOrders,
+        message: "Order Fetched!",
+        order: foundOrder,
       });
+    } catch (err) {
+      next(err);
     }
-
-    const foundOrder = await orderModel.findById(orderId);
-    if (!foundOrder) {
-      throw new Error("Order not found!");
-    }
-
-    const isAdmin = user.role === "admin";
-    const isOwnerOfTheOrderId =
-      foundOrder.userId.toString() === user._id.toString();
-    if (!isOwnerOfTheOrderId && !isAdmin) {
-      throw new Error("Access Denied! You can't view this order!");
-    }
-
-    await setCache(key, foundOrder);
-
-    return res.json({
-      message: "Order Fetched!",
-      order: foundOrder,
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
-orderRouter.get("/orders", userAuth, async (req, res, next) => {
+orderRouter.get("/orders", userAuth, userlimiter, async (req, res, next) => {
   try {
     const user = req.user;
 
