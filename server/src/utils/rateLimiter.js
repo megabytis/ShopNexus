@@ -24,7 +24,7 @@ const authLimiter = rateLimit({
       .json({ error: "Too many login attempts. Try after 15 minutes." });
   },
   keyGenerator: (req) => req.ip,
-  draft_polli_rate_limit_headers: true,
+  draft_polli_ratelimit_headers: true,
 });
 
 const publicApiLimiter = rateLimit({
@@ -40,7 +40,7 @@ const publicApiLimiter = rateLimit({
     res.status(429).json({ error: "Too many requests. Try again later." });
   },
   keyGenerator: (req) => req.ip,
-  draft_polli_rate_limit_headers: true,
+  draft_polli_ratelimit_headers: true,
 });
 
 const searchLimiter = rateLimit({
@@ -56,10 +56,10 @@ const searchLimiter = rateLimit({
     res.status(429).json({ error: "Too many searches. Search again later." });
   },
   keyGenerator: (req) => req.ip,
-  draft_polli_rate_limit_headers: true,
+  draft_polli_ratelimit_headers: true,
 });
 
-const userlimiter = rateLimit({
+const userLimiter = rateLimit({
   store: new RedisStore({
     sendCommand: (...args) => redisClient.call(...args),
   }),
@@ -74,7 +74,7 @@ const userlimiter = rateLimit({
       return req.ip;
     }
   },
-  draft_polli_rate_limit_headers: true,
+  draft_polli_ratelimit_headers: true,
 });
 
 const writeLimiter = rateLimit({
@@ -90,13 +90,13 @@ const writeLimiter = rateLimit({
     res.status(429).json({ error: "Too many edits. Do it again later." });
   },
   keyGenerator: (req) => req.ip,
-  draft_polli_rate_limit_headers: true,
+  draft_polli_ratelimit_headers: true,
 });
 
 module.exports = {
   authLimiter,
   publicApiLimiter,
   searchLimiter,
-  userlimiter,
+  userLimiter,
   writeLimiter,
 };
