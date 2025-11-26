@@ -6,12 +6,13 @@ const jwt = require("jsonwebtoken");
 const { userModel } = require("../models/user");
 const { validateSignupData } = require("../utils/validate");
 const { userAuth } = require("../middleware/Auth");
+const { authLimiter } = require("../utils/rateLimiter");
 
 const authRouter = express.Router();
 
 const isProd = process.env.NODE_ENV === "production";
 
-authRouter.post("/auth/signup", async (req, res, next) => {
+authRouter.post("/auth/signup", authLimiter, async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
     validateSignupData(req);
@@ -44,7 +45,7 @@ authRouter.post("/auth/signup", async (req, res, next) => {
   }
 });
 
-authRouter.post("/auth/login", async (req, res, next) => {
+authRouter.post("/auth/login", authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
