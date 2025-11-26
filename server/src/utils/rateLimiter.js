@@ -9,88 +9,78 @@ const redisClient = new Redis({
   password: process.env.REDIS_PASSWORD,
 });
 
-const authLimiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+// ------------------------------
+// Base Limiter Factory
+// ------------------------------
+const createLimiter = ({
+  windowMs,
+  max,
+  message = "Too many requests. Try again later.",
+  keyGenerator = (req) => req.ip,
+  prefix,
+}) =>
+  rateLimit({
+    store: new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args),
+      prefix: prefix || "rl:common:",
+    }),
+    windowMs,
+    max,
+    standardHeaders: true,
+    legacyHeaders: false,
+    draft_polli_ratelimit_headers: true,
+    message: { error: message },
+    handler: (req, res) => {
+      return res.status(429).json({ error: message });
+    },
+    keyGenerator,
+  });
+
+// ------------------------------
+// Actual Limiters
+// ------------------------------
+
+// 1) AUTH LIMITER
+const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many login attempts. Try after 15 minutes." },
-  handler: (req, res) => {
-    res
-      .status(429)
-      .json({ error: "Too many login attempts. Try after 15 minutes." });
-  },
-  keyGenerator: (req) => req.ip,
-  draft_polli_ratelimit_headers: true,
+  message: "Too many login/signup attempts. Try after 15 minutes.",
+  prefix: "rl:auth:",
 });
 
-const publicApiLimiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+// 2) PUBLIC API LIMITER
+const publicApiLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many requests. Try again later." },
-  handler: (req, res) => {
-    res.status(429).json({ error: "Too many requests. Try again later." });
-  },
-  keyGenerator: (req) => req.ip,
-  draft_polli_ratelimit_headers: true,
+  prefix: "rl:public:",
 });
 
-const searchLimiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+// 3) SEARCH LIMITER
+const searchLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many searches. Search again later." },
-  handler: (req, res) => {
-    res.status(429).json({ error: "Too many searches. Search again later." });
-  },
-  keyGenerator: (req) => req.ip,
-  draft_polli_ratelimit_headers: true,
+  message: "Too many searches. Try again later.",
+  prefix: "rl:search:",
 });
 
-const userLimiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+// 4) USER LIMITER (Auth Required)
+// Key based on user ID (preferred) else fallback IP
+const userLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => {
-    if (req.user && req.user._id) {
-      return `user:${String(req.user._id)}`;
-    } else {
-      return req.ip;
-    }
-  },
-  draft_polli_ratelimit_headers: true,
+  keyGenerator: (req) =>
+    req.user && req.user._id ? `user:${String(req.user._id)}` : req.ip,
+  prefix: "rl:user:",
 });
 
-const writeLimiter = rateLimit({
-  store: new RedisStore({
-    sendCommand: (...args) => redisClient.call(...args),
-  }),
+// 5) WRITE LIMITER (User-Based)
+const writeLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many edits. Do it again later." },
-  handler: (req, res) => {
-    res.status(429).json({ error: "Too many edits. Do it again later." });
-  },
-  keyGenerator: (req) => req.ip,
-  draft_polli_ratelimit_headers: true,
+  message: "Too many write operations. Try again later.",
+  keyGenerator: (req) =>
+    req.user && req.user._id ? `user:${String(req.user._id)}` : req.ip,
+  prefix: "rl:write:",
 });
 
 module.exports = {
