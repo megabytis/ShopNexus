@@ -6,6 +6,8 @@ const { productModel } = require("../models/product");
 
 const { writeLimiter } = require("../utils/rateLimiter");
 
+const { orderQueue } = require("../bullmq/queues/orderQueue");
+
 const checkoutRouter = express.Router();
 
 // Checkout Summary
@@ -188,7 +190,14 @@ checkoutRouter.post(
       cartDetails.cart = [];
       await cartDetails.save();
 
-      res.status(201).json({
+      // adding Background job (BullMQ)
+      await orderQueue.add("processOrder", {
+        userId: user._id,
+        orderId: newOrder._id,
+        email: user.email
+      })
+
+      return res.status(201).json({
         message: "Payment successful! Order created.",
         order: newOrder,
       });
