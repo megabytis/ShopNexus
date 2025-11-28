@@ -33,7 +33,7 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  signup: (data) => api.post("/auth/signup", data),
+  signup: (data) => api.post("/auth/register", data),
   login: (data) => api.post("/auth/login", data),
   logout: () => api.post("/auth/logout"),
 };
