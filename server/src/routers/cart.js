@@ -5,7 +5,7 @@ const { userAuth } = require("../middleware/Auth");
 const { validateMongoID } = require("../utils/validate");
 const { productModel } = require("../models/product");
 const { userModel } = require("../models/user");
-const { userlimiter } = require("../utils/rateLimiter");
+const { userLimiter } = require("../utils/rateLimiter");
 
 const cartRouter = express.Router();
 
@@ -147,7 +147,7 @@ cartRouter.delete(
   }
 );
 
-cartRouter.get("/cart", userAuth, userlimiter, async (req, res, next) => {
+cartRouter.get("/cart", userAuth, userLimiter, async (req, res, next) => {
   try {
     const user = req.user;
 
