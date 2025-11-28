@@ -88,6 +88,7 @@ authRouter.post("/auth/login", authLimiter, async (req, res, next) => {
         httpOnly: true,
         secure: isProd,
         sameSite: "strict",
+        partitioned: true,
         path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
@@ -163,6 +164,7 @@ authRouter.post("/auth/refresh", async (req, res, next) => {
       httpOnly: true,
       secure: isProd,
       sameSite: "strict",
+      partitioned: true,
       path: "/",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -190,6 +192,7 @@ authRouter.post("/auth/logout", async (req, res, next) => {
       httpOnly: true,
       secure: isProd,
       sameSite: "strict",
+      partitioned: true,
       path: "/",
     });
     res.clearCookie("token"); // Clear legacy cookie
@@ -211,6 +214,7 @@ authRouter.post("/auth/logout-all", userAuth, async (req, res, next) => {
       httpOnly: true,
       secure: isProd,
       sameSite: "strict",
+      partitioned: true,
       path: "/",
     });
     res.clearCookie("token");
