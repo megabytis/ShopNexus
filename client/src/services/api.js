@@ -1,5 +1,6 @@
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/authStore";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8888";
@@ -12,22 +13,94 @@ export const api = axios.create({
   },
 });
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+api.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    const { response } = error;
-    if (response) {
-      if (response.status === 401 || response.status === 403) {
-        // Dispatch a custom event so the auth store can listen and logout
-        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers["Authorization"] = "Bearer " + token;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
       }
-      // Don't show toast for 401s as they might be just session checks
-      if (response.status !== 401) {
-        toast.error(response.data?.message || "An error occurred");
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Call refresh endpoint
+        // We use a separate axios instance or just direct axios to avoid circular interceptors
+        // providing the same base URL and credentials
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        const { accessToken } = data;
+
+        // Update store
+        useAuthStore.getState().setToken(accessToken);
+
+        // Process queued requests
+        processQueue(null, accessToken);
+
+        // Retry original request
+        originalRequest.headers["Authorization"] = "Bearer " + accessToken;
+        return api(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        useAuthStore.getState().logout();
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    // Standard error handling
+    if (error.response) {
+      // Don't show toast for 401s as they are handled above or are session expiries
+      if (error.response.status !== 401) {
+        toast.error(error.response.data?.message || "An error occurred");
       }
     } else {
       toast.error("Network error. Please check your connection.");
     }
+
     return Promise.reject(error);
   }
 );

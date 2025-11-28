@@ -8,13 +8,13 @@ const { productModel } = require("../models/product");
 const { default: mongoose } = require("mongoose");
 const { setCache, getCache, removeCache } = require("../utils/cache");
 const { buildKey } = require("../utils/keyGenerator");
-const { userlimiter } = require("../utils/rateLimiter");
+const { userLimiter } = require("../utils/rateLimiter");
 const { authorize } = require("../middleware/Role");
 
 const orderRouter = express.Router();
 
 // in /orders/my API, the particular logged in user (be it normal user or admin) can only see his/her personal orders, not of others
-orderRouter.get("/orders/my", userAuth, userlimiter, async (req, res, next) => {
+orderRouter.get("/orders/my", userAuth, userLimiter, async (req, res, next) => {
   try {
     const user = req.user;
 
@@ -66,7 +66,7 @@ If the logged-in user is an admin:
 orderRouter.get(
   "/orders/:id",
   userAuth,
-  userlimiter,
+  userLimiter,
   async (req, res, next) => {
     try {
       const user = req.user;
@@ -108,7 +108,7 @@ orderRouter.get(
   }
 );
 
-orderRouter.get("/orders", userAuth, userlimiter, async (req, res, next) => {
+orderRouter.get("/orders", userAuth, userLimiter, async (req, res, next) => {
   try {
     const user = req.user;
 
