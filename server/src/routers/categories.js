@@ -8,12 +8,12 @@ const {
 } = require("../utils/validate");
 const { getCache, setCache, removeCache } = require("../utils/cache");
 const { buildKey } = require("../utils/keyGenerator");
+const { authorize } = require("../middleware/Role");
 
 const categoriesRouter = express.Router();
 
 categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
   try {
-    const isAdmin = req.user.role === "admin" ? true : false;
     const { name } = req.body;
 
     validateNewCategoriesData(req);
@@ -25,9 +25,7 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
       throw new Error("Category already exists!");
     }
 
-    if (!isAdmin) {
-      throw new Error("You are not authorised to Post categories!");
-    }
+    authorize("admin");
 
     const category = new categoriesModel({
       name: name.trim().toLowerCase(),
@@ -69,13 +67,10 @@ categoriesRouter.get("/categories", async (req, res, next) => {
 
 categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
   try {
-    const isAdmin = req.user.role === "admin" ? true : false;
     const { name } = req.body;
     const { id } = req.params;
 
-    if (!isAdmin) {
-      throw new Error("You are not authorised to Post categories!");
-    }
+    authorize("admin");
     validateMongoID(id);
     validateNewCategoriesData(req);
 
@@ -101,12 +96,9 @@ categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
 
 categoriesRouter.delete("/categories/:id", userAuth, async (req, res, next) => {
   try {
-    const isAdmin = req.user.role === "admin" ? true : false;
     const { id } = req.params;
 
-    if (!isAdmin) {
-      throw new Error("You're not authorised to Delete categories!");
-    }
+    authorize("admin");
 
     const categoryFoundOrNot = await categoriesModel.findById(id.toString());
 

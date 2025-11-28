@@ -7,6 +7,7 @@ const { categoriesModel } = require("../models/category");
 const { buildKey } = require("../utils/keyGenerator");
 const { getCache, setCache, removeCache } = require("../utils/cache");
 const { publicApiLimiter, searchLimiter } = require("../utils/rateLimiter");
+const { authorize } = require("../middleware/Role");
 
 const productsRouter = express.Router();
 
@@ -15,11 +16,7 @@ productsRouter.post("/products", userAuth, async (req, res, next) => {
     const { title, description, price, stock, image, category } = req.body;
 
     validateProductsData(req);
-
-    const isAdmin = req.user.role === "admin" ? true : false;
-    if (!isAdmin) {
-      throw new Error("You aren't Authorized to add products!");
-    }
+    authorize("admin");
 
     const isSameTitleAvailable = await productModel.findOne({ title: title });
 
@@ -232,11 +229,7 @@ productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
 
     const { id } = req.params;
     validateMongoID(id);
-
-    const isAdmin = req.user.role === "admin" ? true : false;
-    if (!isAdmin) {
-      throw new Error("You aren't Authorized to update products!");
-    }
+    authorize("admin");
 
     await removeCache(buildKey("product:details", { id }));
 

@@ -9,6 +9,7 @@ const { default: mongoose } = require("mongoose");
 const { setCache, getCache, removeCache } = require("../utils/cache");
 const { buildKey } = require("../utils/keyGenerator");
 const { userlimiter } = require("../utils/rateLimiter");
+const { authorize } = require("../middleware/Role");
 
 const orderRouter = express.Router();
 
@@ -88,10 +89,10 @@ orderRouter.get(
         throw new Error("Order not found!");
       }
 
-      const isAdmin = user.role === "admin";
+      authorize("admin");
       const isOwnerOfTheOrderId =
         foundOrder.userId.toString() === user._id.toString();
-      if (!isOwnerOfTheOrderId && !isAdmin) {
+      if (!isOwnerOfTheOrderId) {
         throw new Error("Access Denied! You can't view this order!");
       }
 
@@ -111,9 +112,7 @@ orderRouter.get("/orders", userAuth, userlimiter, async (req, res, next) => {
   try {
     const user = req.user;
 
-    if (user.role !== "admin") {
-      return res.status(403).json({ error: "Access Denied" });
-    }
+    authorize("admin");
 
     let {
       page,
@@ -319,10 +318,7 @@ orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
       throw new Error("Invalid MongoId!");
     }
     validateOrderStatus(req);
-
-    if (user.role !== "admin") {
-      return res.status(403).json({ error: "Access Denied!" });
-    }
+    authorize("admin");
 
     const foundOrder = await orderModel.findById(id);
     if (!foundOrder) {
