@@ -1,5 +1,5 @@
 const rateLimit = require("express-rate-limit");
-const { RedisStore } = require("rate-limit-redis");
+const RedisStore = require("rate-limit-redis");
 const Redis = require("ioredis");
 const { ipKeyGenerator } = require("express-rate-limit");
 
@@ -27,9 +27,8 @@ const createLimiter = ({
     }),
     windowMs,
     max,
-    standardHeaders: true,
-    legacyHeaders: false,
     standardHeaders: "draft-6",
+    legacyHeaders: false,
     message: { error: message },
     handler: (req, res) => {
       return res.status(429).json({ error: message });
@@ -70,7 +69,9 @@ const userLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 200,
   keyGenerator: (req) =>
-    req.user && req.user._id ? `user:${String(req.user._id)}` : req.ip,
+    req.user && req.user._id
+      ? `user:${String(req.user._id)}`
+      : ipKeyGenerator(req),
   prefix: "rl:user:",
 });
 
@@ -80,7 +81,9 @@ const writeLimiter = createLimiter({
   max: 30,
   message: "Too many write operations. Try again later.",
   keyGenerator: (req) =>
-    req.user && req.user._id ? `user:${String(req.user._id)}` : req.ip,
+    req.user && req.user._id
+      ? `user:${String(req.user._id)}`
+      : ipKeyGenerator(req),
   prefix: "rl:write:",
 });
 
