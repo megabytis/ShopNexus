@@ -4,12 +4,12 @@ const validator = require("validator");
 const jwt = require("jsonwebtoken");
 
 const { userModel } = require("../models/user");
-const { sessionModel } = require("../models/sessionModel");
+const { sessionModel } = require("../models/session");
 const {
   generateAccessToken,
   generateRefreshToken,
   hashToken,
-} = require("../utils/tokenUtils");
+} = require("../utils/token");
 const { validateSignupData } = require("../utils/validate");
 const { userAuth } = require("../middleware/Auth");
 const { authLimiter } = require("../utils/rateLimiter");
@@ -67,12 +67,10 @@ authRouter.post("/auth/login", authLimiter, async (req, res, next) => {
     const isPassSame = await bcrypt.compare(password, foundUser.password);
 
     if (isPassSame) {
-      // Generate Tokens
       const accessToken = generateAccessToken(foundUser);
       const refreshToken = generateRefreshToken();
       const refreshTokenHash = hashToken(refreshToken);
 
-      // Create Session
       const session = new sessionModel({
         userId: foundUser._id,
         refreshTokenHash,
@@ -82,7 +80,6 @@ authRouter.post("/auth/login", authLimiter, async (req, res, next) => {
       });
       await session.save();
 
-      // Set Refresh Token Cookie
       const isProd = process.env.NODE_ENV === "production";
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
@@ -93,7 +90,6 @@ authRouter.post("/auth/login", authLimiter, async (req, res, next) => {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      // Also clear old token cookie if it exists to avoid confusion
       res.clearCookie("token");
 
       return res.json({
