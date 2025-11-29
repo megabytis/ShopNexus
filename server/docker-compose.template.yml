@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  # Backend API Server
+  # Note: This template uses cloud-hosted MongoDB Atlas and Redis Cloud
+  # Copy this file to docker-compose.yml and fill in your actual credentials
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shopnexus-backend
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      # Application Configuration
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 8888
+
+      # MongoDB Atlas Configuration
+      # Get your connection string from: https://cloud.mongodb.com
+      MONGO_CONNECTION_STRING: ${MONGO_CONNECTION_STRING}
+
+      # Redis Cloud Configuration
+      # Get your credentials from: https://redis.com/try-free
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_USERNAME: ${REDIS_USERNAME:-default}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+      # JWT Configuration
+      # Generate with: openssl rand -base64 32
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+
+      # Frontend URL for CORS
+      FRONTEND_URL: ${FRONTEND_URL}
+
+      # Cookie Configuration
+      # Generate with: openssl rand -base64 32
+      COOKIE_SECRET: ${COOKIE_SECRET}
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:8888/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})",
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+# Note: No volumes needed since we're using cloud databases
+# Note: No custom network needed for single service
