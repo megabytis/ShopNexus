@@ -37,6 +37,11 @@ app.use(
 app.use(express.json());
 app.use(cookieparser());
 
+// Health check endpoint for Docker and monitoring
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 app.use("/", authRouter);
 app.use("/", categoriesRouter);
 app.use("/", productsRouter);
