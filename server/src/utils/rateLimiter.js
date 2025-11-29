@@ -1,6 +1,7 @@
 const rateLimit = require("express-rate-limit");
 const { RedisStore } = require("rate-limit-redis");
 const Redis = require("ioredis");
+const { ipKeyGenerator } = require("express-rate-limit");
 
 const redisClient = new Redis({
   host: process.env.REDIS_HOST,
@@ -16,7 +17,7 @@ const createLimiter = ({
   windowMs,
   max,
   message = "Too many requests. Try again later.",
-  keyGenerator = (req) => req.ip,
+  keyGenerator = (req) => ipKeyGenerator(req),
   prefix,
 }) =>
   rateLimit({
@@ -28,7 +29,7 @@ const createLimiter = ({
     max,
     standardHeaders: true,
     legacyHeaders: false,
-    draft_polli_ratelimit_headers: true,
+    standardHeaders: "draft-6",
     message: { error: message },
     handler: (req, res) => {
       return res.status(429).json({ error: message });
