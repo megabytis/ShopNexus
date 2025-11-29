@@ -12,7 +12,7 @@ const { authorize } = require("../middleware/Role");
 
 const categoriesRouter = express.Router();
 
-categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
+categoriesRouter.post("/categories", userAuth, authorize("admin"), async (req, res, next) => {
   try {
     const { name } = req.body;
 
@@ -24,8 +24,6 @@ categoriesRouter.post("/categories", userAuth, async (req, res, next) => {
     if (!availableCategory) {
       throw new Error("Category already exists!");
     }
-
-    authorize("admin");
 
     const category = new categoriesModel({
       name: name.trim().toLowerCase(),
@@ -65,12 +63,11 @@ categoriesRouter.get("/categories", async (req, res, next) => {
   }
 });
 
-categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
+categoriesRouter.put("/categories/:id", userAuth, authorize("admin"), async (req, res, next) => {
   try {
     const { name } = req.body;
     const { id } = req.params;
 
-    authorize("admin");
     validateMongoID(id);
     validateNewCategoriesData(req);
 
@@ -94,11 +91,9 @@ categoriesRouter.put("/categories/:id", userAuth, async (req, res, next) => {
   }
 });
 
-categoriesRouter.delete("/categories/:id", userAuth, async (req, res, next) => {
+categoriesRouter.delete("/categories/:id", userAuth, authorize("admin"), async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    authorize("admin");
 
     const categoryFoundOrNot = await categoriesModel.findById(id.toString());
 

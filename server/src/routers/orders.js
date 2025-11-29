@@ -66,6 +66,7 @@ If the logged-in user is an admin:
 orderRouter.get(
   "/orders/:id",
   userAuth,
+  authorize("admin"),
   userLimiter,
   async (req, res, next) => {
     try {
@@ -89,7 +90,6 @@ orderRouter.get(
         throw new Error("Order not found!");
       }
 
-      authorize("admin");
       const isOwnerOfTheOrderId =
         foundOrder.userId.toString() === user._id.toString();
       if (!isOwnerOfTheOrderId) {
@@ -108,11 +108,9 @@ orderRouter.get(
   }
 );
 
-orderRouter.get("/orders", userAuth, userLimiter, async (req, res, next) => {
+orderRouter.get("/orders", userAuth, authorize("admin"),userLimiter, async (req, res, next) => {
   try {
     const user = req.user;
-
-    authorize("admin");
 
     let {
       page,
@@ -308,7 +306,7 @@ orderRouter.get("/orders", userAuth, userLimiter, async (req, res, next) => {
   }
 });
 
-orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
+orderRouter.put("/orders/:id/status", userAuth, authorize("admin"),async (req, res, next) => {
   try {
     const user = req.user;
     const { orderStatus } = req.body;
@@ -318,7 +316,6 @@ orderRouter.put("/orders/:id/status", userAuth, async (req, res, next) => {
       throw new Error("Invalid MongoId!");
     }
     validateOrderStatus(req);
-    authorize("admin");
 
     const foundOrder = await orderModel.findById(id);
     if (!foundOrder) {

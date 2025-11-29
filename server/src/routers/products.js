@@ -11,12 +11,11 @@ const { authorize } = require("../middleware/Role");
 
 const productsRouter = express.Router();
 
-productsRouter.post("/products", userAuth, async (req, res, next) => {
+productsRouter.post("/products", userAuth, authorize("admin"), async (req, res, next) => {
   try {
     const { title, description, price, stock, image, category } = req.body;
 
     validateProductsData(req);
-    authorize("admin");
 
     const isSameTitleAvailable = await productModel.findOne({ title: title });
 
@@ -223,13 +222,12 @@ productsRouter.get(
   }
 );
 
-productsRouter.put("/products/:id", userAuth, async (req, res, next) => {
+productsRouter.put("/products/:id", userAuth, authorize("admin") ,async (req, res, next) => {
   try {
     const { title, description, price, stock, image, category } = req.body;
 
     const { id } = req.params;
     validateMongoID(id);
-    authorize("admin");
 
     await removeCache(buildKey("product:details", { id }));
 
