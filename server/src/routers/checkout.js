@@ -7,6 +7,7 @@ const { productModel } = require("../models/product");
 const { writeLimiter } = require("../utils/rateLimiter");
 
 const { orderQueue } = require("../bullmq/queues/orderQueue");
+const { processOrder } = require("../services/checkoutService");
 
 const checkoutRouter = express.Router();
 
@@ -104,102 +105,20 @@ checkoutRouter.post(
   async (req, res, next) => {
     try {
       const user = req.user;
-
-      const cartDetails = await userModel
-        .findById(user._id.toString())
-        .populate("cart.productId");
-
-      if (!cartDetails.cart.length) {
-        throw new Error("Cart is empty!");
-      }
-
-      let totalAmount = 0;
-      const orderItems = [];
-
-      // verifying each product and calculating total Amount
-      for (const item of cartDetails.cart) {
-        const availableProduct = item.productId;
-
-        if (!availableProduct) {
-          throw new Error("Product no longer Exists!");
-        }
-
-        // checking if stock is available or not
-        if (availableProduct.stock < item.quantity) {
-          throw new Error(
-            `Product if out of Stock! \n ${availableProduct.title}`
-          );
-        }
-
-        // Total Amount
-        totalAmount += Number(availableProduct.price * item.quantity);
-
-        orderItems.push({
-          productId: availableProduct._id,
-          quantity: item.quantity,
-          priceAtPurchase: availableProduct.price,
-        });
-      }
-
       const { shippingAddress } = req.body;
 
-      console.log("Received shippingAddress:", shippingAddress);
-
-      if (
-        !shippingAddress ||
-        !shippingAddress.fullName?.trim() ||
-        !shippingAddress.addressLine1?.trim() ||
-        !shippingAddress.city?.trim() ||
-        !shippingAddress.state?.trim() ||
-        !shippingAddress.postalCode?.trim() ||
-        !shippingAddress.country?.trim()
-      ) {
-        throw new Error("Please provide a complete shipping address!");
-      }
-
-      // Creating Order
-      const newOrder = await orderModel.create({
-        userId: user._id,
-        items: orderItems,
-        totalAmount: parseFloat(totalAmount.toFixed(2)),
-        paymentStatus: "paid",
-        orderStatus: "processing",
-        shippingAddress,
-      });
-
-      // Deducting stock for each product
-      for (const item of cartDetails.cart) {
-        const result = await productModel.updateOne(
-          {
-            _id: item.productId._id,
-            stock: { $gte: item.quantity },
-          },
-          {
-            $inc: { stock: -item.quantity },
-          }
-        );
-
-        if (result.modifiedCount === 0) {
-          throw new Error(
-            `Stock changed! Only ${item.productId.stock} left for ${item.productId.title}`
-          );
-        }
-      }
-
-      // at the end clearing user cart
-      cartDetails.cart = [];
-      await cartDetails.save();
+      const order = processOrder(user, shippingAddress);
 
       // adding Background job (BullMQ)
       await orderQueue.add("processOrder", {
         userId: user._id,
         orderId: newOrder._id,
-        email: user.email
-      })
+        email: user.email,
+      });
 
       return res.status(201).json({
         message: "Payment successful! Order created.",
-        order: newOrder,
+        order: order,
       });
     } catch (err) {
       next(err);
