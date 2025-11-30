@@ -8,6 +8,7 @@ const { buildKey } = require("../utils/keyGenerator");
 const { getCache, setCache, removeCache } = require("../utils/cache");
 const { publicApiLimiter, searchLimiter } = require("../utils/rateLimiter");
 const { authorize } = require("../middleware/Role");
+const { createProduct } = require("../services/productService");
 
 const productsRouter = express.Router();
 
@@ -17,37 +18,15 @@ productsRouter.post(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      const { title, description, price, stock, image, category } = req.body;
-
       validateProductsData(req);
 
-      const isSameTitleAvailable = await productModel.findOne({ title: title });
-
-      if (isSameTitleAvailable) {
-        throw new Error("Duplicate Title not Allowed!");
-      }
-
-      const isValidCategory = await categoriesModel.findOne({ _id: category });
-      if (!isValidCategory) {
-        throw new Error("Category not found!");
-      }
-
-      const products = new productModel({
-        title: title,
-        description: description,
-        price: Number(price),
-        stock: Number(stock),
-        image: image,
-        category: category,
-      });
-
-      const savedProducts = await products.save();
+      const product = await createProduct(req.body);
 
       await removeCache(buildKey("products:list"));
 
       return res.json({
         message: "Product created successfully!",
-        data: savedProducts,
+        data: product,
       });
     } catch (err) {
       next(err);
