@@ -11,44 +11,49 @@ const { authorize } = require("../middleware/Role");
 
 const productsRouter = express.Router();
 
-productsRouter.post("/products", userAuth, authorize("admin"), async (req, res, next) => {
-  try {
-    const { title, description, price, stock, image, category } = req.body;
+productsRouter.post(
+  "/products",
+  userAuth,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const { title, description, price, stock, image, category } = req.body;
 
-    validateProductsData(req);
+      validateProductsData(req);
 
-    const isSameTitleAvailable = await productModel.findOne({ title: title });
+      const isSameTitleAvailable = await productModel.findOne({ title: title });
 
-    if (isSameTitleAvailable) {
-      throw new Error("Duplicate Title not Allowed!");
+      if (isSameTitleAvailable) {
+        throw new Error("Duplicate Title not Allowed!");
+      }
+
+      const isValidCategory = await categoriesModel.findOne({ _id: category });
+      if (!isValidCategory) {
+        throw new Error("Category not found!");
+      }
+
+      const products = new productModel({
+        title: title,
+        description: description,
+        price: Number(price),
+        stock: Number(stock),
+        image: image,
+        category: category,
+      });
+
+      const savedProducts = await products.save();
+
+      await removeCache(buildKey("products:list"));
+
+      return res.json({
+        message: "Product created successfully!",
+        data: savedProducts,
+      });
+    } catch (err) {
+      next(err);
     }
-
-    const isValidCategory = await categoriesModel.findOne({ _id: category });
-    if (!isValidCategory) {
-      return res.status(404).json({ error: "Category not found!" });
-    }
-
-    const products = new productModel({
-      title: title,
-      description: description,
-      price: Number(price),
-      stock: Number(stock),
-      image: image,
-      category: category,
-    });
-
-    const savedProducts = await products.save();
-
-    await removeCache(buildKey("products:list"));
-
-    return res.json({
-      message: "Product created successfully!",
-      data: savedProducts,
-    });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 // GET /products with multiple filters
 productsRouter.get(
@@ -79,7 +84,7 @@ productsRouter.get(
           _id: category,
         });
         if (!isValidCategory) {
-          return res.status(404).json({ error: "Category not found!" });
+          throw new Error("Category not found!");
         }
       }
 
@@ -90,13 +95,6 @@ productsRouter.get(
       limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
 
       const skip = (page - 1) * limit;
-
-      const totalPosts = await productModel.countDocuments();
-      const totalPages = Math.ceil(totalPosts / limit);
-
-      if (page > totalPages && totalPages > 0) {
-        throw new Error("Page limit Exceeded!");
-      }
 
       const filter = {};
 
@@ -120,6 +118,13 @@ productsRouter.get(
             description: { $regex: search, $options: "i" },
           },
         ];
+      }
+
+      const totalPosts = await productModel.countDocuments(filter);
+      const totalPages = Math.ceil(totalPosts / limit);
+
+      if (page > totalPages && totalPages > 0) {
+        throw new Error("Page limit Exceeded!");
       }
 
       // Sorting Logic
@@ -222,36 +227,53 @@ productsRouter.get(
   }
 );
 
-productsRouter.put("/products/:id", userAuth, authorize("admin") ,async (req, res, next) => {
-  try {
-    const { title, description, price, stock, image, category } = req.body;
+productsRouter.put(
+  "/products/:id",
+  userAuth,
+  authorize("admin"),
+  async (req, res, next) => {
+    try {
+      const { title, description, price, stock, image, category } = req.body;
 
-    const { id } = req.params;
-    validateMongoID(id);
+      const { id } = req.params;
+      validateMongoID(id);
+      validateProductsData(req);
 
-    await removeCache(buildKey("product:details", { id }));
+      // Checking if another product already has this title
+      const existingProduct = await productModel.findOne({ title: title });
+      if (existingProduct && existingProduct._id.toString() !== id) {
+        throw new Error("Duplicate Title not Allowed!");
+      }
 
-    const foundProduct = await productModel.findByIdAndUpdate(
-      id,
-      {
-        title: title,
-        description: description,
-        price: price,
-        stock: stock,
-        image: image,
-        category: category,
-      },
-      { new: true, runValidators: true }
-    );
+      const isValidCategory = await categoriesModel.findOne({ _id: category });
+      if (!isValidCategory) {
+        throw new Error("Category not found!");
+      }
 
-    return res.json({
-      message: "Product Updated Successfully!",
-      product: foundProduct,
-    });
-  } catch (err) {
-    next(err);
+      await removeCache(buildKey("product:details", { id }));
+
+      const foundProduct = await productModel.findByIdAndUpdate(
+        id,
+        {
+          title: title,
+          description: description,
+          price: Number(price),
+          stock: Number(stock),
+          image: image,
+          category: category,
+        },
+        { new: true, runValidators: true }
+      );
+
+      return res.json({
+        message: "Product Updated Successfully!",
+        product: foundProduct,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
-});
+);
 
 productsRouter.delete("/products/:id", userAuth, async (req, res, next) => {
   try {
