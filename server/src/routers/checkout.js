@@ -1,6 +1,5 @@
 const express = require("express");
 const { userAuth } = require("../middleware/Auth");
-const { userModel } = require("../models/user");
 const { writeLimiter } = require("../utils/rateLimiter");
 
 const { orderQueue } = require("../bullmq/queues/orderQueue");
