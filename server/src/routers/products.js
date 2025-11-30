@@ -8,7 +8,7 @@ const { buildKey } = require("../utils/keyGenerator");
 const { getCache, setCache, removeCache } = require("../utils/cache");
 const { publicApiLimiter, searchLimiter } = require("../utils/rateLimiter");
 const { authorize } = require("../middleware/Role");
-const { createProduct } = require("../services/productService");
+const { createProduct, getProducts } = require("../services/productService");
 
 const productsRouter = express.Router();
 
@@ -53,72 +53,8 @@ productsRouter.get(
         search,
       } = req.query;
 
-      // Map min/max to minPrice/maxPrice if provided
-      if (min) minPrice = min;
-      if (max) maxPrice = max;
-
-      // Only validate category if it's provided
-      if (category) {
-        const isValidCategory = await categoriesModel.findOne({
-          _id: category,
-        });
-        if (!isValidCategory) {
-          throw new Error("Category not found!");
-        }
-      }
-
-      page = parseInt(page) || 1;
-
-      const MAX_LIMIT = 12;
-      limit = parseInt(limit) || MAX_LIMIT;
-      limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
-
-      const skip = (page - 1) * limit;
-
-      const filter = {};
-
-      if (category) {
-        filter.category = category;
-      }
-
-      minPrice = Number(minPrice);
-      maxPrice = Number(maxPrice);
-      if (minPrice && maxPrice)
-        filter.price = { $gte: minPrice, $lte: maxPrice };
-      else if (minPrice) filter.price = { $gte: minPrice };
-      else if (maxPrice) filter.price = { $lte: maxPrice };
-
-      if (search) {
-        filter.$or = [
-          {
-            title: { $regex: search, $options: "i" },
-          },
-          {
-            description: { $regex: search, $options: "i" },
-          },
-        ];
-      }
-
-      const totalPosts = await productModel.countDocuments(filter);
-      const totalPages = Math.ceil(totalPosts / limit);
-
-      if (page > totalPages && totalPages > 0) {
-        throw new Error("Page limit Exceeded!");
-      }
-
-      // Sorting Logic
-      const sortOptions = {};
-      if (sortBy === "createdAt") {
-        sortOptions.createdAt = -1; // Newest first
-      } else if (sortBy === "price") {
-        sortOptions.price = 1; // Low to High
-      } else if (sortBy === "-price") {
-        sortOptions.price = -1; // High to Low
-      } else if (sortBy === "title") {
-        sortOptions.title = 1; // A-Z
-      } else {
-        sortOptions.createdAt = -1; // Default
-      }
+      const filters = req.query;
+      const filteredProducts = (await getProducts(filters)).products;
 
       // Adding Redis Caching
       const key = buildKey("products:list", {
@@ -136,22 +72,14 @@ productsRouter.get(
         return res.json(cachedProducts);
       }
 
-      const products = await productModel
-        .find(filter)
-        .sort(sortOptions)
-        .skip(skip)
-        .limit(limit)
-        .populate("category", "name");
-
-      const total = await productModel.countDocuments(filter);
-
+      const Total = (await getProducts(filters)).total;
       const responseData = {
         message: "Filtered Products!",
-        totalProducts: total,
-        totalPages: Math.ceil(total / limit),
+        totalProducts: Total,
+        totalPages: Math.ceil(Total / limit),
         page: Number(page),
         limit: Number(limit),
-        products,
+        products: filteredProducts,
       };
 
       await setCache(key, responseData, 60);
