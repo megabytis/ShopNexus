@@ -1,13 +1,11 @@
 const express = require("express");
 const { userAuth } = require("../middleware/Auth");
 const { userModel } = require("../models/user");
-const { orderModel } = require("../models/order");
-const { productModel } = require("../models/product");
-
 const { writeLimiter } = require("../utils/rateLimiter");
 
 const { orderQueue } = require("../bullmq/queues/orderQueue");
 const { processOrder } = require("../services/checkoutService");
+const { getCheckoutSummary } = require("../services/checkoutSummaryService");
 
 const checkoutRouter = express.Router();
 
@@ -29,58 +27,8 @@ checkoutRouter.post(
   writeLimiter,
   async (req, res, next) => {
     try {
-      const user = req.user;
-
-      const cartDetails = await userModel
-        .findById(user._id.toString())
-        .select("cart")
-        .populate("cart.productId");
-
-      if (!cartDetails || !cartDetails.cart?.length) {
-        return res.json({
-          message: "Cart is Empty!",
-        });
-      }
-
-      // Filter out items where product no longer exists
-      const validItems = cartDetails.cart.filter((item) => item.productId);
-
-      // If items were removed, update the cart
-      if (validItems.length < cartDetails.cart.length) {
-        cartDetails.cart = validItems;
-        await cartDetails.save();
-      }
-
-      if (validItems.length === 0) {
-        return res.json({
-          message: "Cart is Empty (Invalid items removed)!",
-          amount: 0,
-          currency: "INR",
-          totalItems: 0,
-        });
-      }
-
-      // verifying each product and calculating total Amount
-      let totalAmount = 0;
-      for (const item of validItems) {
-        const availableProduct = item.productId;
-
-        // checking if stock is available or not
-        if (availableProduct.stock < item.quantity) {
-          throw new Error(
-            `Product is out of Stock! \n ${availableProduct.title}`
-          );
-        }
-
-        // Total Amount
-        totalAmount += Number(availableProduct.price * item.quantity);
-      }
-      res.json({
-        message: "Checkout Summary!",
-        amount: parseFloat(totalAmount.toFixed(2)),
-        currency: "INR",
-        totalItems: cartDetails.cart.length,
-      });
+      const summary = getCheckoutSummary(req.user._id);
+      res.json(summary);
     } catch (err) {
       next(err);
     }
