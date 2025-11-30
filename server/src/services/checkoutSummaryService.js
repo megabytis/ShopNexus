@@ -6,7 +6,7 @@ async function getCheckoutSummary(userId) {
   }
 
   const cartDetails = await userModel
-    .findById(user._id.toString())
+    .findById(userId.toString())
     .select("cart")
     .populate("cart.productId");
 
