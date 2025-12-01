@@ -1,17 +1,18 @@
-require("dotenv").config();
+import dotenv from "dotenv";
+dotenv.config();
 
-const express = require("express");
-const cookieparser = require("cookie-parser");
-const cors = require("cors");
+import express from "express";
+import cookieparser from "cookie-parser";
+import cors from "cors";
 
-const { connectDB } = require("./src/config/database");
+import { connectDB } from "./src/config/database.js";
 
-const authRouter = require("./src/routers/auth");
-const categoriesRouter = require("./src/routers/categories");
-const productsRouter = require("./src/routers/products");
-const cartRouter = require("./src/routers/cart");
-const checkoutRouter = require("./src/routers/checkout");
-const orderRouter = require("./src/routers/orders");
+import authRouter from "./src/routers/auth";
+import categoriesRouter from "./src/routers/categories";
+import productsRouter from "./src/routers/products";
+import cartRouter from "./src/routers/cart";
+import checkoutRouter from "./src/routers/checkout";
+import orderRouter from "./src/routers/orders";
 
 const app = express();
 

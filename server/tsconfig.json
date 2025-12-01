@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+
+    "rootDir": ".", // IMPORTANT! Because my app.ts is OUTSIDE src/
+    "outDir": "dist",
+
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+
+    "strict": false,
+    "skipLibCheck": true
+  }
+}
