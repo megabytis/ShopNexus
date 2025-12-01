@@ -12,7 +12,7 @@ async function getPersonalOrders(userId) {
   validateMongoID(userId);
 
   const foundOrder = await orderModel
-    .find({ userId: user._id })
+    .findById(userId.toString())
     .sort({ createdAt: -1 });
 
   if (!foundOrder.length) {
@@ -26,7 +26,7 @@ async function getPersonalOrders(userId) {
   return foundOrder;
 }
 
-async function getOrderById(orderId) {
+async function getOrderById(user, orderId) {
   if (!orderId) {
     throw new Error("userID not found!");
   }
@@ -39,7 +39,7 @@ async function getOrderById(orderId) {
 
   const isOwnerOfTheOrderId =
     foundOrder.userId.toString() === user._id.toString();
-  if (!isOwnerOfTheOrderId) {
+  if (!isOwnerOfTheOrderId && user.role.toString() !== "admin") {
     throw new Error("Access Denied! You can't view this order!");
   }
 
