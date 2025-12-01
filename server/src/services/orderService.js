@@ -26,10 +26,7 @@ async function getOrderById(orderId) {
   if (!orderId) {
     throw new Error("userID not found!");
   }
-
-  if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new Error("Invalid OrderId!");
-  }
+  validateMongoID(orderId);
 
   const foundOrder = await orderModel.findById(orderId);
   if (!foundOrder) {
@@ -202,9 +199,7 @@ async function updateOrderStatusById(orderId, status) {
   if (!orderId) {
     throw new Error("OrderID not found!");
   }
-  if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new Error("Invalid MongoId!");
-  }
+  validateMongoID(orderId);
   validateOrderStatus(status);
 
   const foundOrder = await orderModel.findById(orderId);

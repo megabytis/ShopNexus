@@ -63,7 +63,8 @@ async function getProducts(filters) {
 
   minPrice = Number(minPrice);
   maxPrice = Number(maxPrice);
-  if (minPrice && maxPrice) filter.price = { $gte: minPrice, $lte: maxPrice };
+  if (minPrice && maxPrice)
+    filterQuery.price = { $gte: minPrice, $lte: maxPrice };
   else if (minPrice) filterQuery.price = { $gte: minPrice };
   else if (maxPrice) filterQuery.price = { $lte: maxPrice };
 

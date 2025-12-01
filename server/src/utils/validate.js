@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const validator = require("validator");
 
 const validateSignupData = (req) => {
@@ -22,11 +23,8 @@ const validateNewCategoriesData = (req) => {
 };
 
 const validateMongoID = (id) => {
-  if (!id) {
-    throw new Error("Invalid MongoID!");
-  }
-  if (!validator.isMongoId(String(id))) {
-    throw new Error("Invalid MongoID!");
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error("Invalid ID!");
   }
 };
 
