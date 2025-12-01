@@ -1,4 +1,8 @@
+const { default: mongoose } = require("mongoose");
+
 const { orderModel } = require("../models/order");
+const { userModel } = require("../models/user");
+const { productModel } = require("../models/product");
 const { validateMongoID, validateOrderStatus } = require("../utils/validate");
 
 async function getPersonalOrders(userId) {

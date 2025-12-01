@@ -1,11 +1,6 @@
 const express = require("express");
 
 const { userAuth } = require("../middleware/Auth");
-const { orderModel } = require("../models/order");
-const { validateOrderStatus } = require("../utils/validate");
-const { userModel } = require("../models/user");
-const { productModel } = require("../models/product");
-const { default: mongoose } = require("mongoose");
 const { setCache, getCache, removeCache } = require("../utils/cache");
 const { buildKey } = require("../utils/keyGenerator");
 const { userLimiter } = require("../utils/rateLimiter");
