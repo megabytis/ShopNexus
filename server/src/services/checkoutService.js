@@ -1,5 +1,4 @@
 const { userModel } = require("../models/user");
-const { hasSufficientStock } = require("../domain/stockRules");
 
 async function processOrder(user, shippingAddress) {
   if (!user || !user._id) {

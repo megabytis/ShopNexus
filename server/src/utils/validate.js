@@ -30,8 +30,8 @@ const validateMongoID = (id) => {
   }
 };
 
-const validateProductsData = (req) => {
-  const { title, description, price, stock, image, category } = req.body;
+const validateProductsData = (data) => {
+  const { title, description, price, stock, image, category } = data;
   if (!title || String(title).trim().length < 1) {
     throw new Error("Invalid Title!");
   }

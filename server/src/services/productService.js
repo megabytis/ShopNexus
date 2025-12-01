@@ -1,4 +1,6 @@
 const { productModel } = require("../models/product");
+const { categoriesModel } = require("../models/category");
+const { validateMongoID, validateProductsData } = require("../utils/validate");
 
 async function createProduct(data) {
   const { title, description, price, stock, image, category } = data;
@@ -119,7 +121,71 @@ async function getProducts(filters) {
   return { products, total };
 }
 
+async function getProductById(productId) {
+  if (!productId) {
+    throw new Error("No Product ID found!");
+  }
+  validateMongoID(productId);
+
+  const foundProduct = await productModel
+    .findById(productId.toString())
+    .select("title description price stock image category")
+    .populate("category");
+
+  if (!foundProduct) {
+    throw new Error("Invalid Product ID!");
+  }
+}
+
+async function updateProduct(productId, updatedData) {
+  if (!productId) {
+    throw new Error("ProductID not found!");
+  }
+  validateMongoID(productId);
+
+  const { title, description, price, stock, image, category } = updatedData;
+  validateProductsData(updatedData);
+
+  // Checking if another product already has this title
+  const existingProduct = await productModel.findOne({ title }).lean();
+  if (existingProduct && existingProduct._id.toString() !== id) {
+    throw new Error("Duplicate Title not Allowed!");
+  }
+
+  const isValidCategory = await categoriesModel.findOne({ _id: category });
+  if (!isValidCategory) {
+    throw new Error("Category not found!");
+  }
+
+  const foundProduct = await productModel.findByIdAndUpdate(
+    productId.toString(),
+    {
+      title: title,
+      description: description,
+      price: Number(price),
+      stock: Number(stock),
+      image: image,
+      category: category,
+    },
+    { new: true, runValidators: true }
+  );
+
+  return foundProduct;
+}
+
+async function deleteProduct(productId) {
+  if (!productId) {
+    throw new Error("ProductID not found!");
+  }
+  validateMongoID(productId);
+
+  const foundProduct = await productModel.findByIdAndDelete(id);
+}
+
 module.exports = {
   createProduct,
   getProducts,
+  getProductById,
+  updateProduct,
+  deleteProduct,
 };
