@@ -14,6 +14,7 @@ const {
   getPersonalOrders,
   getOrderById,
   getOrderByFilter,
+  updateOrderStatusById,
 } = require("../services/orderService");
 
 const orderRouter = express.Router();
@@ -158,31 +159,14 @@ orderRouter.put(
   authorize("admin"),
   async (req, res, next) => {
     try {
-      const user = req.user;
       const { orderStatus } = req.body;
       const { id } = req.params;
 
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new Error("Invalid MongoId!");
-      }
-      validateOrderStatus(req);
-
-      const foundOrder = await orderModel.findById(id);
-      if (!foundOrder) {
-        return res.status(404).json({ error: "Order not found" });
-      }
-
-      const updatedOrderStatus = await orderModel.findByIdAndUpdate(
-        id,
-        {
-          orderStatus: orderStatus.toString(),
-        },
-        { new: true }
-      );
+      const order = await updateOrderStatusById(id, orderStatus);
 
       const orderDetailsKey = buildKey("order:details", { orderId: id });
       const myOrdersKey = buildKey("orders:my", {
-        userId: foundOrder.userId.toString(),
+        userId: order.userId.toString(),
       });
 
       await removeCache(orderDetailsKey);
@@ -190,7 +174,7 @@ orderRouter.put(
 
       res.json({
         message: "Order status Updated Successfully!",
-        updatedOrder: updatedOrderStatus,
+        updatedOrder: order,
       });
     } catch (err) {
       next(err);

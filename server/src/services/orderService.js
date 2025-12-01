@@ -1,5 +1,5 @@
 const { orderModel } = require("../models/order");
-const { validateMongoID } = require("../utils/validate");
+const { validateMongoID, validateOrderStatus } = require("../utils/validate");
 
 async function getPersonalOrders(userId) {
   if (!userId) {
@@ -198,8 +198,34 @@ async function getOrderByFilter(filter) {
   return allOrders;
 }
 
+async function updateOrderStatusById(orderId, status) {
+  if (!orderId) {
+    throw new Error("OrderID not found!");
+  }
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    throw new Error("Invalid MongoId!");
+  }
+  validateOrderStatus(status);
+
+  const foundOrder = await orderModel.findById(orderId);
+  if (!foundOrder) {
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  const updatedOrderStatus = await orderModel.findByIdAndUpdate(
+    orderId,
+    {
+      orderStatus: status.toString(),
+    },
+    { new: true }
+  );
+
+  return updatedOrderStatus;
+}
+
 module.exports = {
   getPersonalOrders,
   getOrderById,
   getOrderByFilter,
+  updateOrderStatusById,
 };

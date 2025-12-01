@@ -56,15 +56,13 @@ const validateProductsData = (data) => {
   }
 };
 
-const validateOrderStatus = (req) => {
-  const { orderStatus } = req.body;
-
+const validateOrderStatus = (status) => {
   const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
 
-  if (!orderStatus) {
+  if (!status) {
     throw new Error("No status provided!");
   }
-  if (!validOrderStatus.includes(String(orderStatus))) {
+  if (!validOrderStatus.includes(String(status))) {
     throw new Error("Invalid Order Status!");
   }
 };
