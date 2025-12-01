@@ -1,79 +1,23 @@
 const express = require("express");
 
 const { userAuth } = require("../middleware/Auth");
-const { userModel } = require("../models/user");
 const { userLimiter } = require("../utils/rateLimiter");
+
 const {
-  addToCart,
-  updateCart,
-  deleteCartProduct,
-  getCart,
-} = require("../services/cartService");
+  addProduct,
+  updateProduct,
+  deleteProduct,
+  showCart,
+} = require("../controllers/cartController");
 
 const cartRouter = express.Router();
 
-cartRouter.post("/cart/add", userAuth, async (req, res, next) => {
-  try {
-    const { productId, quantity } = req.body;
-    const user = req.user;
+cartRouter.post("/cart/add", userAuth, addProduct);
 
-    const cart = await addToCart(user, productId, quantity);
+cartRouter.put("/cart/update", userAuth, updateProduct);
 
-    return res.json({
-      message: "Cart Updated Successfully!",
-      cart,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
+cartRouter.delete("/cart/remove/:productId", userAuth, deleteProduct);
 
-cartRouter.put("/cart/update", userAuth, async (req, res, next) => {
-  try {
-    const user = req.user;
-    const { productId, quantity } = req.body;
-
-    const cart = await updateCart(user, productId, quantity);
-
-    return res.json({
-      message: "Cart updated Successfully!",
-      cart,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-cartRouter.delete(
-  "/cart/remove/:productId",
-  userAuth,
-  async (req, res, next) => {
-    try {
-      const { productId } = req.params;
-      const user = req.user;
-
-      const cart = await deleteCartProduct(user, productId);
-
-      return res.json({
-        message: "Product Removed Successfully!",
-        cart: cart,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-cartRouter.get("/cart", userAuth, userLimiter, async (req, res, next) => {
-  try {
-    const user = req.user;
-
-    const cart = await getCart(user._id);
-
-    res.json(cart);
-  } catch (err) {
-    next(err);
-  }
-});
+cartRouter.get("/cart", userAuth, userLimiter, showCart);
 
 module.exports = cartRouter;
