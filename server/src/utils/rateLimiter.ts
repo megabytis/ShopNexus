@@ -2,7 +2,6 @@ import rateLimit, { Options } from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import Redis from "ioredis";
 // @ts-ignore
-import { ipKeyGenerator } from "express-rate-limit";
 import { Request, Response } from "express";
 
 const redisClient = new Redis({
@@ -27,7 +26,7 @@ const createLimiter = ({
   windowMs,
   max,
   message = "Too many requests. Try again later.",
-  keyGenerator = (req: Request) => ipKeyGenerator(req),
+  keyGenerator = (req: Request) => req.ip || "127.0.0.1",
   prefix,
 }: CreateLimiterOptions) =>
   rateLimit({
@@ -82,7 +81,7 @@ export const userLimiter = createLimiter({
   keyGenerator: (req: any) =>
     req.user && req.user._id
       ? `user:${String(req.user._id)}`
-      : ipKeyGenerator(req),
+      : req.ip || "127.0.0.1",
   prefix: "rl:user:",
 });
 
@@ -94,6 +93,6 @@ export const writeLimiter = createLimiter({
   keyGenerator: (req: any) =>
     req.user && req.user._id
       ? `user:${String(req.user._id)}`
-      : ipKeyGenerator(req),
+      : req.ip || "127.0.0.1",
   prefix: "rl:write:",
 });

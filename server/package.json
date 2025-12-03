@@ -25,12 +25,13 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.20.0",
     "mongoose": "^8.19.1",
-    "node": "^24.10.0",
     "rate-limit-redis": "^4.3.0",
     "validator": "^13.15.15"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
     "@types/validator": "^13.15.10",
     "ts-node": "^10.9.2",
