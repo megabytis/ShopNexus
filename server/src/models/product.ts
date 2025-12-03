@@ -1,6 +1,17 @@
-const mongoose = require("mongoose");
+import mongoose, { Document, Schema, Types } from "mongoose";
 
-const productSchema = new mongoose.Schema(
+export interface IProduct extends Document {
+  title: string;
+  description?: string;
+  price: number;
+  stock: number;
+  image: string;
+  category: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const productSchema = new Schema<IProduct>(
   {
     title: {
       type: String,
@@ -28,7 +39,7 @@ const productSchema = new mongoose.Schema(
       default: "",
     },
     category: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "categories",
       required: true,
       index: true,
@@ -40,8 +51,4 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ title: "text", description: "text" });
 productSchema.index({ createdAt: -1 });
 
-const productModel = new mongoose.model("products", productSchema);
-
-module.exports = {
-  productModel,
-};
+export const productModel = mongoose.model<IProduct>("products", productSchema);

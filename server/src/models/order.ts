@@ -1,9 +1,36 @@
-const mongoose = require("mongoose");
+import mongoose, { Document, Schema, Types } from "mongoose";
 
-const orderSchema = new mongoose.Schema(
+export interface IOrderItem {
+  productId: Types.ObjectId;
+  quantity: number;
+  priceAtPurchase: number;
+}
+
+export interface IShippingAddress {
+  fullName: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface IOrder extends Document {
+  userId: Types.ObjectId;
+  items: IOrderItem[];
+  totalAmount: number;
+  paymentStatus: "pending" | "paid" | "failed";
+  orderStatus: "processing" | "shipped" | "delivered" | "cancelled";
+  shippingAddress: IShippingAddress;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const orderSchema = new Schema<IOrder>(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "user",
       required: true,
       index: true,
@@ -11,7 +38,7 @@ const orderSchema = new mongoose.Schema(
     items: [
       {
         productId: {
-          type: mongoose.Schema.Types.ObjectId,
+          type: Schema.Types.ObjectId,
           ref: "products",
           required: true,
         },
@@ -37,7 +64,7 @@ const orderSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
       index: true,
-      validate(status) {
+      validate(status: string) {
         const requiredStatus = ["pending", "paid", "failed"];
         if (!requiredStatus.includes(status)) {
           throw new Error("Invalid payment status!");
@@ -49,7 +76,7 @@ const orderSchema = new mongoose.Schema(
       enum: ["processing", "shipped", "delivered", "cancelled"],
       default: "processing",
       index: true,
-      validate(status) {
+      validate(status: string) {
         const requiredStatus = [
           "processing",
           "shipped",
@@ -57,7 +84,7 @@ const orderSchema = new mongoose.Schema(
           "cancelled",
         ];
         if (!requiredStatus.includes(status)) {
-          throw new Error("Invalid payment status!");
+          throw new Error("Invalid order status!");
         }
       },
     },
@@ -76,6 +103,4 @@ const orderSchema = new mongoose.Schema(
 
 orderSchema.index({ createdAt: -1 });
 
-const orderModel = new mongoose.model("orders", orderSchema);
-
-module.exports = { orderModel };
+export const orderModel = mongoose.model<IOrder>("orders", orderSchema);
