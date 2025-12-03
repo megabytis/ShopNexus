@@ -12,8 +12,6 @@
 
     "strict": false,
     "skipLibCheck": true,
-
-    "types": ["node", "express"]
   },
 
   "include": ["app.ts", "src/**/*"],
