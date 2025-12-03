@@ -1,14 +1,24 @@
-const rateLimit = require("express-rate-limit");
-const RedisStore = require("rate-limit-redis").default;
-const Redis = require("ioredis");
-const { ipKeyGenerator } = require("express-rate-limit");
+import rateLimit, { Options } from "express-rate-limit";
+import RedisStore from "rate-limit-redis";
+import Redis from "ioredis";
+// @ts-ignore
+import { ipKeyGenerator } from "express-rate-limit";
+import { Request, Response } from "express";
 
 const redisClient = new Redis({
   host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
+  port: Number(process.env.REDIS_PORT),
   username: process.env.REDIS_USERNAME,
   password: process.env.REDIS_PASSWORD,
 });
+
+interface CreateLimiterOptions {
+  windowMs: number;
+  max: number;
+  message?: string;
+  keyGenerator?: (req: Request | any, res?: Response) => string;
+  prefix?: string;
+}
 
 // ------------------------------
 // Base Limiter Factory
@@ -17,12 +27,13 @@ const createLimiter = ({
   windowMs,
   max,
   message = "Too many requests. Try again later.",
-  keyGenerator = (req) => ipKeyGenerator(req),
+  keyGenerator = (req: Request) => ipKeyGenerator(req),
   prefix,
-}) =>
+}: CreateLimiterOptions) =>
   rateLimit({
     store: new RedisStore({
-      sendCommand: (...args) => redisClient.call(...args),
+      // @ts-ignore
+      sendCommand: (...args: any[]) => redisClient.call(...args),
       prefix: prefix || "rl:common:",
     }),
     windowMs,
@@ -30,7 +41,7 @@ const createLimiter = ({
     standardHeaders: "draft-6",
     legacyHeaders: false,
     message: { error: message },
-    handler: (req, res) => {
+    handler: (req: Request, res: Response) => {
       return res.status(429).json({ error: message });
     },
     keyGenerator,
@@ -41,7 +52,7 @@ const createLimiter = ({
 // ------------------------------
 
 // 1) AUTH LIMITER
-const authLimiter = createLimiter({
+export const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: "Too many login/signup attempts. Try after 15 minutes.",
@@ -49,14 +60,14 @@ const authLimiter = createLimiter({
 });
 
 // 2) PUBLIC API LIMITER
-const publicApiLimiter = createLimiter({
+export const publicApiLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 60,
   prefix: "rl:public:",
 });
 
 // 3) SEARCH LIMITER
-const searchLimiter = createLimiter({
+export const searchLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 30,
   message: "Too many searches. Try again later.",
@@ -65,10 +76,10 @@ const searchLimiter = createLimiter({
 
 // 4) USER LIMITER (Auth Required)
 // Key based on user ID (preferred) else fallback IP
-const userLimiter = createLimiter({
+export const userLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 200,
-  keyGenerator: (req) =>
+  keyGenerator: (req: any) =>
     req.user && req.user._id
       ? `user:${String(req.user._id)}`
       : ipKeyGenerator(req),
@@ -76,21 +87,13 @@ const userLimiter = createLimiter({
 });
 
 // 5) WRITE LIMITER (User-Based)
-const writeLimiter = createLimiter({
+export const writeLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: 30,
   message: "Too many write operations. Try again later.",
-  keyGenerator: (req) =>
+  keyGenerator: (req: any) =>
     req.user && req.user._id
       ? `user:${String(req.user._id)}`
       : ipKeyGenerator(req),
   prefix: "rl:write:",
 });
-
-module.exports = {
-  authLimiter,
-  publicApiLimiter,
-  searchLimiter,
-  userLimiter,
-  writeLimiter,
-};

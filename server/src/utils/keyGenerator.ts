@@ -1,4 +1,4 @@
-const buildKey = (resource, params = {}) => {
+export const buildKey = (resource: string, params: Record<string, any> = {}): string => {
   let key = resource;
 
   for (const [k, v] of Object.entries(params)) {
@@ -11,5 +11,3 @@ const buildKey = (resource, params = {}) => {
 
   return key;
 };
-
-module.exports = { buildKey };
