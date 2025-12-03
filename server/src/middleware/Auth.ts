@@ -1,3 +1,4 @@
+import "cookie-parser";
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 // @ts-ignore
@@ -27,7 +28,6 @@ export const userAuth = async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     const foundUserObj = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as any;
-
     const foundUser = await userModel.findById(foundUserObj._id);
 
     if (!foundUser) {
@@ -37,7 +37,6 @@ export const userAuth = async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     req.user = foundUser;
-
     next();
   } catch (err: any) {
     if (err.name === "TokenExpiredError") {
