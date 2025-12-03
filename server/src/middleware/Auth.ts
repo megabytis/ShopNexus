@@ -1,31 +1,37 @@
-const jwt = require("jsonwebtoken");
-const { userModel } = require("../models/user");
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+// @ts-ignore
+import { userModel } from '../models/user';
 
-const userAuth = async (req, res, next) => {
+export interface AuthRequest extends Request {
+  user?: any;
+}
+
+export const userAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    let token;
+    let token: string | undefined;
 
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith("Bearer ")
     ) {
       token = req.headers.authorization.split(" ")[1];
-    } else if (req.cookies.token) {
+    } else if (req.cookies && req.cookies.token) {
       token = req.cookies.token;
     }
 
     if (!token) {
-      const err = new Error("Please Authenticate!");
+      const err: any = new Error("Please Authenticate!");
       err.statusCode = 401;
       throw err;
     }
 
-    const foundUserObj = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    const foundUserObj = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as any;
 
     const foundUser = await userModel.findById(foundUserObj._id);
 
     if (!foundUser) {
-      const err = new Error("User not found!");
+      const err: any = new Error("User not found!");
       err.statusCode = 401;
       throw err;
     }
@@ -33,7 +39,7 @@ const userAuth = async (req, res, next) => {
     req.user = foundUser;
 
     next();
-  } catch (err) {
+  } catch (err: any) {
     if (err.name === "TokenExpiredError") {
       err.statusCode = 401;
       err.message = "Token Expired";
@@ -43,8 +49,4 @@ const userAuth = async (req, res, next) => {
     }
     next(err);
   }
-};
-
-module.exports = {
-  userAuth,
 };
