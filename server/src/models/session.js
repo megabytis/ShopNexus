@@ -1,17 +1,7 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-export interface ISession extends Document {
-  userId: Types.ObjectId;
-  refreshTokenHash: string;
-  userAgent?: string;
-  ip?: string;
-  valid: boolean;
-  expiresAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const sessionSchema = new Schema<ISession>(
+const sessionSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -40,4 +30,6 @@ const sessionSchema = new Schema<ISession>(
   { timestamps: true }
 );
 
-export const sessionModel = mongoose.model<ISession>("Session", sessionSchema);
+const sessionModel = mongoose.model("Session", sessionSchema);
+
+module.exports = { sessionModel };

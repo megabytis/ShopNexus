@@ -1,22 +1,8 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
-import validator from "validator";
+const mongoose = require("mongoose");
+const validator = require("validator");
+const { Schema } = mongoose;
 
-export interface ICartItem {
-  productId: Types.ObjectId;
-  quantity: number;
-}
-
-export interface IUser extends Document {
-  name: string;
-  email: string;
-  password?: string;
-  role: "user" | "admin";
-  cart: ICartItem[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const userSchema = new Schema<IUser>({
+const userSchema = new Schema({
   name: {
     type: String,
     required: true,
@@ -30,7 +16,7 @@ const userSchema = new Schema<IUser>({
     required: true,
     lowercase: true,
     trim: true,
-    validate(mail: string) {
+    validate(mail) {
       if (!validator.isEmail(mail)) {
         throw new Error(`Email Not Valid ${mail}`);
       }
@@ -38,7 +24,7 @@ const userSchema = new Schema<IUser>({
   },
   password: {
     type: String,
-    validate(pass: string) {
+    validate(pass) {
       if (!validator.isStrongPassword(pass)) {
         throw new Error(`Not a Strong Password: ${pass}`);
       }
@@ -64,4 +50,6 @@ const userSchema = new Schema<IUser>({
   ],
 });
 
-export const userModel = mongoose.model<IUser>("user", userSchema);
+const userModel = mongoose.model("user", userSchema);
+
+module.exports = { userModel };

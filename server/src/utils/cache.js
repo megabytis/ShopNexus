@@ -1,6 +1,6 @@
-import { redis } from "../config/redisClient";
+const { redis } = require("../config/redisClient");
 
-export const setCache = async (key: string, value: any, ttl: number = 3600): Promise<void> => {
+const setCache = async (key, value, ttl = 3600) => {
   try {
     await redis.set(key, JSON.stringify(value), "EX", ttl);
   } catch (error) {
@@ -8,7 +8,7 @@ export const setCache = async (key: string, value: any, ttl: number = 3600): Pro
   }
 };
 
-export const getCache = async (key: string): Promise<any> => {
+const getCache = async (key) => {
   try {
     const data = await redis.get(key);
     return data ? JSON.parse(data) : null;
@@ -18,10 +18,16 @@ export const getCache = async (key: string): Promise<any> => {
   }
 };
 
-export const removeCache = async (key: string): Promise<void> => {
+const removeCache = async (key) => {
   try {
     await redis.del(key);
   } catch (error) {
     console.error("Error removing cache:", error);
   }
+};
+
+module.exports = {
+  setCache,
+  getCache,
+  removeCache,
 };

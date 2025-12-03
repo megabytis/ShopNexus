@@ -1,16 +1,9 @@
-import "cookie-parser";
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-// @ts-ignore
-import { userModel } from '../models/user';
+const jwt = require('jsonwebtoken');
+const { userModel } = require('../models/user');
 
-export type AuthRequest = Request & {
-  user?: any;
-};
-
-export const userAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
+const userAuth = async (req, res, next) => {
   try {
-    let token: string | undefined;
+    let token;
 
     if (
       req.headers.authorization &&
@@ -22,23 +15,23 @@ export const userAuth = async (req: AuthRequest, res: Response, next: NextFuncti
     }
 
     if (!token) {
-      const err: any = new Error("Please Authenticate!");
+      const err = new Error("Please Authenticate!");
       err.statusCode = 401;
       throw err;
     }
 
-    const foundUserObj = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as any;
+    const foundUserObj = jwt.verify(token, process.env.JWT_SECRET_KEY);
     const foundUser = await userModel.findById(foundUserObj._id);
 
     if (!foundUser) {
-      const err: any = new Error("User not found!");
+      const err = new Error("User not found!");
       err.statusCode = 401;
       throw err;
     }
 
     req.user = foundUser;
     next();
-  } catch (err: any) {
+  } catch (err) {
     if (err.name === "TokenExpiredError") {
       err.statusCode = 401;
       err.message = "Token Expired";
@@ -49,3 +42,5 @@ export const userAuth = async (req: AuthRequest, res: Response, next: NextFuncti
     next(err);
   }
 };
+
+module.exports = { userAuth };

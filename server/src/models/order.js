@@ -1,33 +1,7 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-export interface IOrderItem {
-  productId: Types.ObjectId;
-  quantity: number;
-  priceAtPurchase: number;
-}
-
-export interface IShippingAddress {
-  fullName: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-}
-
-export interface IOrder extends Document {
-  userId: Types.ObjectId;
-  items: IOrderItem[];
-  totalAmount: number;
-  paymentStatus: "pending" | "paid" | "failed";
-  orderStatus: "processing" | "shipped" | "delivered" | "cancelled";
-  shippingAddress: IShippingAddress;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const orderSchema = new Schema<IOrder>(
+const orderSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -64,7 +38,7 @@ const orderSchema = new Schema<IOrder>(
       enum: ["pending", "paid", "failed"],
       default: "pending",
       index: true,
-      validate(status: string) {
+      validate(status) {
         const requiredStatus = ["pending", "paid", "failed"];
         if (!requiredStatus.includes(status)) {
           throw new Error("Invalid payment status!");
@@ -76,7 +50,7 @@ const orderSchema = new Schema<IOrder>(
       enum: ["processing", "shipped", "delivered", "cancelled"],
       default: "processing",
       index: true,
-      validate(status: string) {
+      validate(status) {
         const requiredStatus = [
           "processing",
           "shipped",
@@ -103,4 +77,6 @@ const orderSchema = new Schema<IOrder>(
 
 orderSchema.index({ createdAt: -1 });
 
-export const orderModel = mongoose.model<IOrder>("orders", orderSchema);
+const orderModel = mongoose.model("orders", orderSchema);
+
+module.exports = { orderModel };

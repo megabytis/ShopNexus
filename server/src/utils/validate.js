@@ -1,8 +1,7 @@
-import mongoose from "mongoose";
-import validator from "validator";
-import { Request } from "express";
+const mongoose = require("mongoose");
+const validator = require("validator");
 
-export const validateSignupData = (req: Request): void => {
+const validateSignupData = (req) => {
   const { name, email, password } = req.body;
 
   if (!name || String(name).trim().length < 2) {
@@ -16,29 +15,20 @@ export const validateSignupData = (req: Request): void => {
   }
 };
 
-export const validateNewCategoriesData = (req: Request): void => {
+const validateNewCategoriesData = (req) => {
   const { name } = req.body;
   if (!name || String(name).trim().length < 2) {
     throw new Error("Invalid Category name");
   }
 };
 
-export const validateMongoID = (id: string): void => {
+const validateMongoID = (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Invalid ID!");
   }
 };
 
-interface ProductData {
-  title: string;
-  description: string;
-  price: number | string;
-  stock: number | string;
-  image: string;
-  category: string;
-}
-
-export const validateProductsData = (data: ProductData): void => {
+const validateProductsData = (data) => {
   const { title, description, price, stock, image, category } = data;
   if (!title || String(title).trim().length < 1) {
     throw new Error("Invalid Title!");
@@ -64,7 +54,7 @@ export const validateProductsData = (data: ProductData): void => {
   }
 };
 
-export const validateOrderStatus = (status: string): void => {
+const validateOrderStatus = (status) => {
   const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
 
   if (!status) {
@@ -73,4 +63,12 @@ export const validateOrderStatus = (status: string): void => {
   if (!validOrderStatus.includes(String(status))) {
     throw new Error("Invalid Order Status!");
   }
+};
+
+module.exports = {
+  validateSignupData,
+  validateNewCategoriesData,
+  validateMongoID,
+  validateProductsData,
+  validateOrderStatus,
 };
