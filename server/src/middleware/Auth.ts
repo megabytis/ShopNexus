@@ -3,9 +3,9 @@ import jwt from 'jsonwebtoken';
 // @ts-ignore
 import { userModel } from '../models/user';
 
-export interface AuthRequest extends Request {
+export type AuthRequest = Request & {
   user?: any;
-}
+};
 
 export const userAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
