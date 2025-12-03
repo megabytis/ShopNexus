@@ -1,7 +1,7 @@
 import rateLimit, { Options } from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import Redis from "ioredis";
-// @ts-ignore
+
 import { Request, Response } from "express";
 
 const redisClient = new Redis({
