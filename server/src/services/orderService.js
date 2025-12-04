@@ -217,11 +217,31 @@ async function updateOrderStatusById(orderId, status) {
     throw new Error("Order not found");
   }
 
+  // Validate: Payment must be 'paid' before status can be changed to packed/shipped/delivered
+  const requiresPaidStatus = ["packed", "shipped", "delivered"];
+  if (requiresPaidStatus.includes(status) && foundOrder.paymentStatus !== "paid") {
+    throw new Error("Cannot update order status: Payment not completed!");
+  }
+
+  // Build update object with appropriate timeline timestamp
+  const updateData = {
+    orderStatus: status.toString(),
+  };
+
+  // Set timeline timestamp based on status
+  if (status === "confirmed") {
+    updateData["orderTimeline.confirmedAt"] = new Date();
+  } else if (status === "packed") {
+    updateData["orderTimeline.packedAt"] = new Date();
+  } else if (status === "shipped") {
+    updateData["orderTimeline.shippedAt"] = new Date();
+  } else if (status === "delivered") {
+    updateData["orderTimeline.deliveredAt"] = new Date();
+  }
+
   const updatedOrderStatus = await orderModel.findByIdAndUpdate(
     orderId,
-    {
-      orderStatus: status.toString(),
-    },
+    updateData,
     { new: true }
   );
 

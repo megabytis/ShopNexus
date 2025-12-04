@@ -41,7 +41,7 @@ const createPaymentIntent = async (req, res, next) => {
         totalAmount: totalAmount,
         shippingAddress: shippingAddress,
         paymentStatus: 'pending',
-        orderStatus: 'processing' 
+        orderStatus: 'pending' 
     });
 
     await newOrder.save();
@@ -93,10 +93,12 @@ const webhook = async (req, res) => {
 
       console.log(`PaymentIntent was successful for Order ${orderId}!`);
 
-      // Updating Order Status
+      // Updating Order Status to PAID + CONFIRMED
       if (orderId) {
           await orderModel.findByIdAndUpdate(orderId, {
-              paymentStatus: 'paid'
+              paymentStatus: 'paid',
+              orderStatus: 'confirmed',
+              'orderTimeline.confirmedAt': new Date()
           });
 
           // Clearing User Cart

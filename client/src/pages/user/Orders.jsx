@@ -121,8 +121,10 @@ export default function Orders() {
                                         <span className={clsx(
                                             "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
                                             {
-                                                'bg-yellow-100 text-yellow-800': order.orderStatus === 'processing',
-                                                'bg-blue-100 text-blue-800': order.orderStatus === 'shipped',
+                                                'bg-gray-100 text-gray-800': order.orderStatus === 'pending',
+                                                'bg-blue-100 text-blue-800': order.orderStatus === 'confirmed',
+                                                'bg-purple-100 text-purple-800': order.orderStatus === 'packed',
+                                                'bg-indigo-100 text-indigo-800': order.orderStatus === 'shipped',
                                                 'bg-green-100 text-green-800': order.orderStatus === 'delivered',
                                                 'bg-red-100 text-red-800': order.orderStatus === 'cancelled',
                                             }

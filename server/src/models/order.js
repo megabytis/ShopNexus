@@ -38,29 +38,18 @@ const orderSchema = new Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
       index: true,
-      validate(status) {
-        const requiredStatus = ["pending", "paid", "failed"];
-        if (!requiredStatus.includes(status)) {
-          throw new Error("Invalid payment status!");
-        }
-      },
     },
     orderStatus: {
       type: String,
-      enum: ["processing", "shipped", "delivered", "cancelled"],
-      default: "processing",
+      enum: ["pending", "confirmed", "packed", "shipped", "delivered", "cancelled"],
+      default: "pending",
       index: true,
-      validate(status) {
-        const requiredStatus = [
-          "processing",
-          "shipped",
-          "delivered",
-          "cancelled",
-        ];
-        if (!requiredStatus.includes(status)) {
-          throw new Error("Invalid order status!");
-        }
-      },
+    },
+    orderTimeline: {
+      confirmedAt: { type: Date },
+      packedAt: { type: Date },
+      shippedAt: { type: Date },
+      deliveredAt: { type: Date },
     },
     shippingAddress: {
       fullName: { type: String, required: true },

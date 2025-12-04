@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ordersAPI } from '../../services/api';
-import { Loader2, ArrowLeft, Package, Truck, CheckCircle, XCircle, Calendar, MapPin, CreditCard } from 'lucide-react';
+import { Loader2, ArrowLeft, Package, Truck, CheckCircle, XCircle, Calendar, MapPin, CreditCard, Box, PackageCheck } from 'lucide-react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
 
@@ -35,9 +35,10 @@ export default function OrderDetail() {
     if (!order) return null;
 
     const steps = [
-        { id: 'processing', label: 'Processing', icon: Package, date: order.createdAt },
-        { id: 'shipped', label: 'Shipped', icon: Truck, date: null }, // Date would come from backend ideally
-        { id: 'delivered', label: 'Delivered', icon: CheckCircle, date: null },
+        { id: 'confirmed', label: 'Confirmed', icon: CheckCircle, date: order.orderTimeline?.confirmedAt },
+        { id: 'packed', label: 'Packed', icon: Box, date: order.orderTimeline?.packedAt },
+        { id: 'shipped', label: 'Shipped', icon: Truck, date: order.orderTimeline?.shippedAt },
+        { id: 'delivered', label: 'Delivered', icon: PackageCheck, date: order.orderTimeline?.deliveredAt },
     ];
 
     const currentStepIndex = steps.findIndex(s => s.id === order.orderStatus);
@@ -66,8 +67,10 @@ export default function OrderDetail() {
                                     <span className={clsx(
                                         "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
                                         {
-                                            'bg-yellow-100 text-yellow-800': order.orderStatus === 'processing',
-                                            'bg-blue-100 text-blue-800': order.orderStatus === 'shipped',
+                                            'bg-gray-100 text-gray-800': order.orderStatus === 'pending',
+                                            'bg-blue-100 text-blue-800': order.orderStatus === 'confirmed',
+                                            'bg-purple-100 text-purple-800': order.orderStatus === 'packed',
+                                            'bg-indigo-100 text-indigo-800': order.orderStatus === 'shipped',
                                             'bg-green-100 text-green-800': order.orderStatus === 'delivered',
                                             'bg-red-100 text-red-800': order.orderStatus === 'cancelled',
                                         }
@@ -162,7 +165,13 @@ export default function OrderDetail() {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-secondary-500">Status</span>
-                                <span className="font-medium text-green-600">Paid</span>
+                                <span className={clsx(
+                                    "font-medium capitalize",
+                                    order.paymentStatus === 'paid' ? 'text-green-600' : 
+                                    order.paymentStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'
+                                )}>
+                                    {order.paymentStatus}
+                                </span>
                             </div>
                             <div className="pt-3 border-t border-secondary-100 flex justify-between items-center">
                                 <span className="font-bold text-secondary-900">Total</span>
@@ -181,11 +190,11 @@ export default function OrderDetail() {
                             <MapPin className="h-5 w-5 text-primary-600" /> Shipping Address
                         </h3>
                         <p className="text-sm text-secondary-500 leading-relaxed">
-                            John Doe<br />
-                            123 Premium Street<br />
-                            Luxury Apartment, Suite 4B<br />
-                            New York, NY 10001<br />
-                            United States
+                            {order.shippingAddress?.fullName}<br />
+                            {order.shippingAddress?.addressLine1}<br />
+                            {order.shippingAddress?.addressLine2 && <>{order.shippingAddress.addressLine2}<br /></>}
+                            {order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.postalCode}<br />
+                            {order.shippingAddress?.country}
                         </p>
                     </motion.div>
 

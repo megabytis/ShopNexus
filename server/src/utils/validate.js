@@ -55,7 +55,7 @@ const validateProductsData = (data) => {
 };
 
 const validateOrderStatus = (status) => {
-  const validOrderStatus = ["processing", "shipped", "delivered", "cancelled"];
+  const validOrderStatus = ["pending", "confirmed", "packed", "shipped", "delivered", "cancelled"];
 
   if (!status) {
     throw new Error("No status provided!");
