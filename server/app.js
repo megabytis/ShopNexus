@@ -14,6 +14,7 @@ const cartRouter = require("./src/routers/cart");
 const checkoutRouter = require("./src/routers/checkout");
 const orderRouter = require("./src/routers/orders");
 const paymentRouter = require("./src/routers/payment");
+const adminRouter = require("./src/routers/admin/adminProducts");
 
 const { webhook } = require("./src/controllers/paymentController");
 
@@ -58,6 +59,7 @@ app.use("/", cartRouter);
 app.use("/", checkoutRouter);
 app.use("/", orderRouter);
 app.use("/", paymentRouter);
+app.use("/admin/products", adminRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
