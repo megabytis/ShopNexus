@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { checkoutAPI } from '../../services/api';
+import { checkoutAPI, api } from '../../services/api';
 import { useCartStore } from '../../store/cartStore';
-import { Loader2, CreditCard, ShieldCheck, Lock, CheckCircle } from 'lucide-react';
+import { Loader2, CreditCard, ShieldCheck, Lock, Calendar, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-export default function Checkout() {
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+const CheckoutContent = () => {
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
@@ -21,6 +25,8 @@ export default function Checkout() {
     });
     const navigate = useNavigate();
     const clearCart = useCartStore((state) => state.clearCart);
+    const stripe = useStripe();
+    const elements = useElements();
 
     useEffect(() => {
         const fetchSummary = async () => {
@@ -62,7 +68,32 @@ export default function Checkout() {
         return pattern.test(postalCode.trim());
     };
 
+    const getCountryCode = (countryName) => {
+        const codes = {
+            'India': 'IN',
+            'United States': 'US',
+            'United Kingdom': 'GB',
+            'Canada': 'CA',
+            'Australia': 'AU',
+            'Germany': 'DE',
+            'France': 'FR',
+            'Japan': 'JP',
+            'China': 'CN',
+            'Brazil': 'BR',
+            'Mexico': 'MX',
+            'Singapore': 'SG',
+            'United Arab Emirates': 'AE',
+            'Saudi Arabia': 'SA',
+            'South Africa': 'ZA',
+        };
+        return codes[countryName] || 'IN';
+    };
+
     const handlePayment = async () => {
+        if (!stripe || !elements) {
+            return;
+        }
+
         setProcessing(true);
         // Validate Address
         if (!shippingAddress.fullName || !shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.state || !shippingAddress.postalCode || !shippingAddress.country) {
@@ -79,10 +110,39 @@ export default function Checkout() {
         }
 
         try {
-            await checkoutAPI.pay({ shippingAddress });
-            toast.success('Payment successful! Order placed.');
-            clearCart();
-            navigate('/orders/my');
+            // 1. Create PaymentIntent
+            const { data } = await api.post('/create-payment-intent', {
+                shippingAddress
+            });
+
+            const { clientSecret } = data;
+
+            // 2. Confirm Payment
+            const cardNumberElement = elements.getElement(CardNumberElement);
+            const result = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: cardNumberElement,
+                    billing_details: {
+                        name: shippingAddress.fullName,
+                        address: {
+                            line1: shippingAddress.addressLine1,
+                            line2: shippingAddress.addressLine2,
+                            city: shippingAddress.city,
+                            state: shippingAddress.state,
+                            postal_code: shippingAddress.postalCode,
+                            country: getCountryCode(shippingAddress.country),
+                        }
+                    },
+                },
+            });
+
+            if (result.error) {
+                toast.error(result.error.message);
+            } else if (result.paymentIntent.status === 'succeeded') {
+                toast.success('Payment successful! Order placed.');
+                await clearCart();
+                navigate('/order-success');
+            }
         } catch (error) {
             console.error('Payment failed', error);
             toast.error(error.response?.data?.message || 'Payment failed. Please try again.');
@@ -266,15 +326,84 @@ export default function Checkout() {
                         <div className="p-8">
                             <h3 className="text-lg font-bold text-secondary-900 mb-6">Payment Method</h3>
 
-                            <div className="bg-secondary-50 border border-secondary-200 rounded-xl p-4 mb-8 flex items-center gap-4 cursor-pointer ring-2 ring-primary-500 ring-offset-2">
-                                <div className="w-12 h-8 bg-white rounded border border-secondary-200 flex items-center justify-center">
-                                    <CreditCard className="h-5 w-5 text-secondary-600" />
+                            {/* Card Number */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-secondary-700 mb-2">Card Number</label>
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400">
+                                        <CreditCard className="h-5 w-5" />
+                                    </div>
+                                    <div className="bg-white border border-secondary-200 rounded-xl py-3.5 pl-12 pr-4 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all">
+                                        <CardNumberElement options={{
+                                            style: {
+                                                base: {
+                                                    fontSize: '16px',
+                                                    color: '#1a1a1a',
+                                                    '::placeholder': { color: '#9ca3af' },
+                                                },
+                                                invalid: { color: '#dc2626' },
+                                            },
+                                            showIcon: true,
+                                        }} />
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-secondary-900">Credit / Debit Card</p>
-                                    <p className="text-xs text-secondary-500">Secure payment via Stripe (Dummy)</p>
+                            </div>
+
+                            {/* Expiry & CVC Row */}
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-2">Expiry Date</label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400">
+                                            <Calendar className="h-5 w-5" />
+                                        </div>
+                                        <div className="bg-white border border-secondary-200 rounded-xl py-3.5 pl-12 pr-4 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all">
+                                            <CardExpiryElement options={{
+                                                style: {
+                                                    base: {
+                                                        fontSize: '16px',
+                                                        color: '#1a1a1a',
+                                                        '::placeholder': { color: '#9ca3af' },
+                                                    },
+                                                    invalid: { color: '#dc2626' },
+                                                },
+                                            }} />
+                                        </div>
+                                    </div>
                                 </div>
-                                <CheckCircle className="h-6 w-6 text-primary-600 fill-primary-50" />
+                                <div>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-2">CVC</label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400">
+                                            <KeyRound className="h-5 w-5" />
+                                        </div>
+                                        <div className="bg-white border border-secondary-200 rounded-xl py-3.5 pl-12 pr-4 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all">
+                                            <CardCvcElement options={{
+                                                style: {
+                                                    base: {
+                                                        fontSize: '16px',
+                                                        color: '#1a1a1a',
+                                                        '::placeholder': { color: '#9ca3af' },
+                                                    },
+                                                    invalid: { color: '#dc2626' },
+                                                },
+                                            }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Accepted Cards */}
+                            <div className="flex items-center gap-2 mb-6">
+                                <span className="text-xs text-secondary-500">Accepted:</span>
+                                <div className="flex gap-1">
+                                    <div className="w-10 h-6 bg-[#1a1f71] rounded flex items-center justify-center text-white text-xs font-bold">VISA</div>
+                                    <div className="w-10 h-6 bg-gradient-to-r from-[#eb001b] to-[#f79e1b] rounded flex items-center justify-center">
+                                        <div className="w-3 h-3 bg-[#eb001b] rounded-full opacity-80"></div>
+                                        <div className="w-3 h-3 bg-[#f79e1b] rounded-full -ml-1 opacity-80"></div>
+                                    </div>
+                                    <div className="w-10 h-6 bg-[#016fd0] rounded flex items-center justify-center text-white text-[7px] font-bold">AMEX</div>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-3 mb-8 text-sm text-secondary-600 bg-blue-50 p-4 rounded-xl border border-blue-100">
@@ -284,7 +413,7 @@ export default function Checkout() {
 
                             <button
                                 onClick={handlePayment}
-                                disabled={processing}
+                                disabled={processing || !stripe}
                                 className="w-full flex items-center justify-center gap-3 bg-primary-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-primary-700 transition-all transform hover:-translate-y-1 shadow-lg shadow-primary-900/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 {processing ? (
@@ -313,5 +442,13 @@ export default function Checkout() {
                 </button>
             </div>
         </div>
+    );
+};
+
+export default function Checkout() {
+    return (
+        <Elements stripe={stripePromise}>
+            <CheckoutContent />
+        </Elements>
     );
 }

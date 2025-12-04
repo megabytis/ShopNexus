@@ -13,6 +13,9 @@ const productsRouter = require("./src/routers/products");
 const cartRouter = require("./src/routers/cart");
 const checkoutRouter = require("./src/routers/checkout");
 const orderRouter = require("./src/routers/orders");
+const paymentRouter = require("./src/routers/payment");
+
+const { webhook } = require("./src/controllers/paymentController");
 
 const app = express();
 
@@ -37,6 +40,9 @@ app.use(
   })
 );
 
+// Stripe Webhook - Must be before express.json()
+app.post("/webhook", express.raw({ type: "application/json" }), webhook);
+
 app.use(express.json());
 app.use(cookieparser());
 
@@ -51,6 +57,7 @@ app.use("/", productsRouter);
 app.use("/", cartRouter);
 app.use("/", checkoutRouter);
 app.use("/", orderRouter);
+app.use("/", paymentRouter);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

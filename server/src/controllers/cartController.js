@@ -65,9 +65,26 @@ async function showCart(req, res, next) {
   }
 }
 
+async function clearCart(req, res, next) {
+  try {
+    const user = req.user;
+    
+    user.cart = [];
+    await user.save();
+
+    return res.json({
+      message: "Cart cleared successfully!",
+      cart: [],
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   addProduct,
   updateProduct,
   deleteProduct,
   showCart,
+  clearCart,
 };

@@ -11,6 +11,7 @@ import Cart from './pages/shop/Cart';
 import Checkout from './pages/shop/Checkout';
 import Orders from './pages/user/Orders';
 import OrderDetail from './pages/user/OrderDetail';
+import OrderSuccess from './pages/shop/OrderSuccess';
 import AdminDashboard from './pages/admin/Dashboard';
 
 function App() {
@@ -41,6 +42,11 @@ function App() {
                     <Route path="orders/:id" element={
                         <ProtectedRoute>
                             <OrderDetail />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="order-success" element={
+                        <ProtectedRoute>
+                            <OrderSuccess />
                         </ProtectedRoute>
                     } />
 

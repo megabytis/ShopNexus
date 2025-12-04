@@ -11,26 +11,20 @@ const {
 async function getMyOrder(req, res, next) {
   try {
     const user = req.user;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const key = buildKey("orders:my", { userId: user._id });
+    const key = buildKey("orders:my", { userId: user._id, page, limit });
     const cachedOrders = await getCache(key);
     if (cachedOrders) {
-      return res.json({
-        message: "Orders fetched from cache!",
-        ordersLength: cachedOrders.length,
-        orders: cachedOrders,
-      });
+      return res.json(cachedOrders);
     }
 
-    const order = getPersonalOrders(user._id);
+    const result = await getPersonalOrders(user._id, page, limit);
 
-    await setCache(key, foundOrder);
+    await setCache(key, result, 60); // Cache for 60 seconds
 
-    return res.json({
-      message: "Orders fetched!",
-      ordersLength: order.length,
-      orders: order,
-    });
+    return res.json(result);
   } catch (err) {
     next(err);
   }
@@ -52,7 +46,7 @@ async function getPersonalOrderById(req, res, next) {
 
     const order = await getOrderById(user, orderId);
 
-    await setCache(key, foundOrder);
+    await setCache(key, order);
 
     return res.json({
       message: "Order Fetched!",
@@ -100,7 +94,7 @@ async function getAllOrders(req, res, next) {
       return res.json(cachedResponse);
     }
 
-    const orders = await getOrderByFilter(req.query);
+    const { orders, totalOrders, totalPages } = await getOrderByFilter(req.query);
 
     const responseData = {
       message: "All orders Fetched!",

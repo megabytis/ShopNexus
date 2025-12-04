@@ -2,12 +2,20 @@ const rateLimit = require("express-rate-limit");
 const RedisStore = require("rate-limit-redis").default || require("rate-limit-redis");
 const Redis = require("ioredis");
 
-const redisClient = new Redis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-  username: process.env.REDIS_USERNAME,
-  password: process.env.REDIS_PASSWORD,
-});
+let redisClient;
+if (process.env.REDIS_HOST && process.env.REDIS_PORT) {
+  redisClient = new Redis({
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
+    username: process.env.REDIS_USERNAME,
+    password: process.env.REDIS_PASSWORD,
+    lazyConnect: true, // Don't connect immediately
+  });
+  // Handle error to prevent crash
+  redisClient.on('error', (err) => {
+     console.error('RateLimiter Redis Error:', err.message);
+  });
+}
 
 // ------------------------------
 // Base Limiter Factory
@@ -18,12 +26,11 @@ const createLimiter = ({
   message = "Too many requests. Try again later.",
   keyGenerator = (req) => req.ip || "127.0.0.1",
   prefix,
-}) =>
-  rateLimit({
-    store: new RedisStore({
-      sendCommand: (...args) => redisClient.call(...args),
-      prefix: prefix || "rl:common:",
-    }),
+}) => {
+  // Check if Redis env vars are present to decide whether to use RedisStore
+  const useRedis = process.env.REDIS_HOST && process.env.REDIS_PORT && redisClient;
+
+  const limiterConfig = {
     windowMs,
     max,
     standardHeaders: "draft-6",
@@ -33,7 +40,18 @@ const createLimiter = ({
       return res.status(429).json({ error: message });
     },
     keyGenerator,
-  });
+    validate: false,
+  };
+
+  if (useRedis) {
+    limiterConfig.store = new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args),
+      prefix: prefix || "rl:common:",
+    });
+  }
+
+  return rateLimit(limiterConfig);
+};
 
 // ------------------------------
 // Actual Limiters

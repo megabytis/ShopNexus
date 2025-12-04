@@ -1,4 +1,30 @@
 const { userModel } = require("../models/user");
+const { productModel } = require("../models/product");
+const { orderModel } = require("../models/order");
+
+async function getCheckoutSummary(userId) {
+  const user = await userModel.findById(userId).populate("cart.productId");
+
+  if (!user || !user.cart || user.cart.length === 0) {
+    throw new Error("Cart is empty!");
+  }
+
+  let totalAmount = 0;
+  let totalItems = 0;
+
+  for (const item of user.cart) {
+    const product = item.productId;
+    if (!product) continue;
+
+    totalAmount += product.price * item.quantity;
+    totalItems += item.quantity;
+  }
+
+  return {
+    amount: parseFloat(totalAmount.toFixed(2)),
+    totalItems,
+  };
+}
 
 async function processOrder(user, shippingAddress) {
   if (!user || !user._id) {
@@ -83,8 +109,11 @@ async function processOrder(user, shippingAddress) {
   // at the end clearing user cart
   cartDetails.cart = [];
   await cartDetails.save();
+
+  return newOrder;
 }
 
 module.exports = {
   processOrder,
+  getCheckoutSummary,
 };

@@ -73,5 +73,14 @@ export const useCartStore = create((set, get) => ({
         }
     },
 
-    clearCart: () => set({ items: [], totalItems: 0 }),
+    clearCart: async () => {
+        try {
+            await cartAPI.clear();
+            set({ items: [], totalItems: 0 });
+        } catch (error) {
+            console.error('Failed to clear cart:', error);
+            // Still clear local state even if API fails
+            set({ items: [], totalItems: 0 });
+        }
+    },
 }));

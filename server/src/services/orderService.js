@@ -5,25 +5,31 @@ const { userModel } = require("../models/user");
 const { productModel } = require("../models/product");
 const { validateMongoID, validateOrderStatus } = require("../utils/validate");
 
-async function getPersonalOrders(userId) {
+async function getPersonalOrders(userId, page = 1, limit = 10) {
   if (!userId) {
     throw new Error("userID not found!");
   }
   validateMongoID(userId);
 
-  const foundOrder = await orderModel
-    .findById(userId.toString())
-    .sort({ createdAt: -1 });
+  const skip = (page - 1) * limit;
 
-  if (!foundOrder.length) {
-    return res.json({
-      message: "No orders yet!",
-      ordersLength: 0,
-      orders: [],
-    });
-  }
+  const totalOrders = await orderModel.countDocuments({ userId: userId });
+  const totalPages = Math.ceil(totalOrders / limit);
 
-  return foundOrder;
+  const orders = await orderModel
+    .find({ userId: userId })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  return {
+    message: "Orders fetched!",
+    totalOrders,
+    totalPages,
+    currentPage: page,
+    limit,
+    orders,
+  };
 }
 
 async function getOrderById(user, orderId) {
@@ -178,7 +184,7 @@ async function getOrderByFilter(filter) {
   page = parseInt(page) || 1;
 
   const MAX_LIMIT = 5;
-  limit = parseInt(req.query.limit) || MAX_LIMIT;
+  limit = parseInt(limit) || MAX_LIMIT;
   limit = limit > MAX_LIMIT ? MAX_LIMIT : limit;
 
   const skip = (page - 1) * limit;
@@ -196,7 +202,7 @@ async function getOrderByFilter(filter) {
     .skip(skip)
     .limit(limit);
 
-  return allOrders;
+  return { orders: allOrders, totalOrders, totalPages };
 }
 
 async function updateOrderStatusById(orderId, status) {
@@ -208,7 +214,7 @@ async function updateOrderStatusById(orderId, status) {
 
   const foundOrder = await orderModel.findById(orderId);
   if (!foundOrder) {
-    return res.status(404).json({ error: "Order not found" });
+    throw new Error("Order not found");
   }
 
   const updatedOrderStatus = await orderModel.findByIdAndUpdate(

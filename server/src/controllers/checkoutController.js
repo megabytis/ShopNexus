@@ -1,9 +1,9 @@
 const { orderQueue } = require("../bullmq/queues/orderQueue");
-const { processOrder } = require("../services/checkoutService");
+const { processOrder, getCheckoutSummary } = require("../services/checkoutService");
 
 async function calculateCheckoutSummary(req, res, next) {
   try {
-    const summary = getCheckoutSummary(req.user._id);
+    const summary = await getCheckoutSummary(req.user._id);
     res.json(summary);
   } catch (err) {
     next(err);
@@ -15,12 +15,12 @@ async function processCheckoutPayment(req, res, next) {
     const user = req.user;
     const { shippingAddress } = req.body;
 
-    const order = processOrder(user, shippingAddress);
+    const order = await processOrder(user, shippingAddress);
 
     // adding Background job (BullMQ)
     await orderQueue.add("processOrder", {
       userId: user._id,
-      orderId: newOrder._id,
+      orderId: order._id,
       email: user.email,
     });
 

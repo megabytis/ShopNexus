@@ -131,6 +131,7 @@ export const cartAPI = {
   add: (data) => api.post("/cart/add", data),
   update: (data) => api.put("/cart/update", data),
   remove: (productId) => api.delete(`/cart/remove/${productId}`),
+  clear: () => api.delete("/cart/clear"),
 };
 
 export const checkoutAPI = {
@@ -139,7 +140,7 @@ export const checkoutAPI = {
 };
 
 export const ordersAPI = {
-  getMyOrders: () => api.get("/orders/my"),
+  getMyOrders: (params) => api.get("/orders/my", { params }),
   getOne: (id) => api.get(`/orders/${id}`),
   getAll: (params) => api.get("/orders", { params }),
   updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),
