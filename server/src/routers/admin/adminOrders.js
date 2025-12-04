@@ -21,7 +21,7 @@ PATCH   /admin/orders/:orderId/cancel   -> cancel an order                      
 adminOrders.get("/", userAuth, authorize("admin"), getAllOrders);
 adminOrders.get("/:id", userAuth, authorize("admin"), getPersonalOrderById);
 adminOrders.patch(
-  "/:orderId/status",
+  "/:id/status",
   userAuth,
   authorize("admin"),
   updateOrderStatus
