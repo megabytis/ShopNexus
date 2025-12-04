@@ -2,47 +2,20 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { checkoutAPI, api } from '../../services/api';
 import { useCartStore } from '../../store/cartStore';
-import { Loader2, CreditCard, ShieldCheck, Lock, Calendar, KeyRound } from 'lucide-react';
+import { Loader2, ShieldCheck, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-const CheckoutContent = () => {
-    const [summary, setSummary] = useState(null);
-    const [loading, setLoading] = useState(true);
+const CheckoutForm = ({ summary, shippingAddress, setShippingAddress }) => {
     const [processing, setProcessing] = useState(false);
-    const [shippingAddress, setShippingAddress] = useState({
-        fullName: '',
-        addressLine1: '',
-        addressLine2: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: ''
-    });
     const navigate = useNavigate();
     const clearCart = useCartStore((state) => state.clearCart);
     const stripe = useStripe();
     const elements = useElements();
-
-    useEffect(() => {
-        const fetchSummary = async () => {
-            try {
-                const res = await checkoutAPI.summary();
-                setSummary(res.data);
-            } catch (error) {
-                console.error('Failed to fetch summary', error);
-                toast.error('Failed to load checkout summary');
-                navigate('/cart');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchSummary();
-    }, [navigate]);
 
     const validatePostalCode = (postalCode, country) => {
         const patterns = {
@@ -54,94 +27,48 @@ const CheckoutContent = () => {
             'Germany': /^\d{5}$/,
             'France': /^\d{5}$/,
             'Japan': /^\d{3}-?\d{4}$/,
-            'China': /^\d{6}$/,
-            'Brazil': /^\d{5}-?\d{3}$/,
-            'Mexico': /^\d{5}$/,
             'Singapore': /^\d{6}$/,
-            'United Arab Emirates': /^\d{5}$/,
-            'Saudi Arabia': /^\d{5}$/,
-            'South Africa': /^\d{4}$/,
         };
-
         const pattern = patterns[country];
-        if (!pattern) return true; // If country not in list, skip validation
+        if (!pattern) return true;
         return pattern.test(postalCode.trim());
     };
 
-    const getCountryCode = (countryName) => {
-        const codes = {
-            'India': 'IN',
-            'United States': 'US',
-            'United Kingdom': 'GB',
-            'Canada': 'CA',
-            'Australia': 'AU',
-            'Germany': 'DE',
-            'France': 'FR',
-            'Japan': 'JP',
-            'China': 'CN',
-            'Brazil': 'BR',
-            'Mexico': 'MX',
-            'Singapore': 'SG',
-            'United Arab Emirates': 'AE',
-            'Saudi Arabia': 'SA',
-            'South Africa': 'ZA',
-        };
-        return codes[countryName] || 'IN';
-    };
-
     const handlePayment = async () => {
-        if (!stripe || !elements) {
-            return;
-        }
+        if (!stripe || !elements) return;
 
         setProcessing(true);
-        // Validate Address
-        if (!shippingAddress.fullName || !shippingAddress.addressLine1 || !shippingAddress.city || !shippingAddress.state || !shippingAddress.postalCode || !shippingAddress.country) {
+
+        if (!shippingAddress.fullName || !shippingAddress.addressLine1 || !shippingAddress.city || 
+            !shippingAddress.state || !shippingAddress.postalCode || !shippingAddress.country) {
             toast.error('Please fill in all required shipping address fields');
             setProcessing(false);
             return;
         }
 
-        // Validate Postal Code Format
         if (!validatePostalCode(shippingAddress.postalCode, shippingAddress.country)) {
-            toast.error(`Invalid postal code format for ${shippingAddress.country}. Please check and try again.`);
+            toast.error(`Invalid postal code format for ${shippingAddress.country}`);
             setProcessing(false);
             return;
         }
 
         try {
-            // 1. Create PaymentIntent
-            const { data } = await api.post('/create-payment-intent', {
-                shippingAddress
-            });
-
-            const { clientSecret } = data;
-
-            // 2. Confirm Payment
-            const cardNumberElement = elements.getElement(CardNumberElement);
-            const result = await stripe.confirmCardPayment(clientSecret, {
-                payment_method: {
-                    card: cardNumberElement,
-                    billing_details: {
-                        name: shippingAddress.fullName,
-                        address: {
-                            line1: shippingAddress.addressLine1,
-                            line2: shippingAddress.addressLine2,
-                            city: shippingAddress.city,
-                            state: shippingAddress.state,
-                            postal_code: shippingAddress.postalCode,
-                            country: getCountryCode(shippingAddress.country),
-                        }
-                    },
+            const result = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: `${window.location.origin}/order-success`,
                 },
+                redirect: 'if_required',
             });
 
             if (result.error) {
                 toast.error(result.error.message);
-            } else if (result.paymentIntent.status === 'succeeded') {
+            } else if (result.paymentIntent?.status === 'succeeded') {
                 toast.success('Payment successful! Order placed.');
                 await clearCart();
                 navigate('/order-success');
+            } else if (result.paymentIntent?.status === 'requires_action') {
+                toast.loading('Complete the payment in your UPI app...');
             }
         } catch (error) {
             console.error('Payment failed', error);
@@ -150,6 +77,226 @@ const CheckoutContent = () => {
             setProcessing(false);
         }
     };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Shipping Address Form */}
+            <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-white rounded-3xl shadow-xl border border-secondary-100 p-8"
+            >
+                <h2 className="text-xl font-bold text-secondary-900 mb-6">Shipping Address</h2>
+                <form className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-secondary-700 mb-1">Full Name</label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="John Doe"
+                            className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            value={shippingAddress.fullName}
+                            onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 1</label>
+                        <input
+                            type="text"
+                            required
+                            placeholder="123 Main Street"
+                            className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            value={shippingAddress.addressLine1}
+                            onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 2 (Optional)</label>
+                        <input
+                            type="text"
+                            placeholder="Apartment, suite, etc."
+                            className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            value={shippingAddress.addressLine2}
+                            onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-secondary-700 mb-1">City</label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="New Delhi"
+                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={shippingAddress.city}
+                                onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-secondary-700 mb-1">State</label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="Delhi"
+                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={shippingAddress.state}
+                                onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-secondary-700 mb-1">Postal Code</label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="110001"
+                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                value={shippingAddress.postalCode}
+                                onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-secondary-700 mb-1">Country</label>
+                            <select
+                                required
+                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                                value={shippingAddress.country}
+                                onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                            >
+                                <option value="">Select Country</option>
+                                <option value="India">India</option>
+                                <option value="United States">United States</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="Canada">Canada</option>
+                                <option value="Australia">Australia</option>
+                                <option value="Germany">Germany</option>
+                                <option value="France">France</option>
+                                <option value="Japan">Japan</option>
+                                <option value="Singapore">Singapore</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </motion.div>
+
+            {/* Order Summary & Payment */}
+            <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+            >
+                <div className="bg-white rounded-3xl shadow-xl border border-secondary-100 overflow-hidden">
+                    <div className="p-8 border-b border-secondary-100 bg-secondary-50/50">
+                        <h2 className="text-xl font-bold text-secondary-900 mb-6">Order Summary</h2>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center text-secondary-600">
+                                <span>Total Items</span>
+                                <span className="font-medium text-secondary-900">{summary.totalItems}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-secondary-600">
+                                <span>Subtotal</span>
+                                <span className="font-medium text-secondary-900">₹{summary.amount}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-secondary-600">
+                                <span>Shipping</span>
+                                <span className="text-green-600 font-medium">Free</span>
+                            </div>
+                            <div className="pt-6 border-t border-secondary-200 flex justify-between items-center">
+                                <span className="text-xl font-bold text-secondary-900">Total Amount</span>
+                                <span className="text-3xl font-bold text-primary-600">₹{summary.amount}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-8">
+                        <h3 className="text-lg font-bold text-secondary-900 mb-6">Payment Method</h3>
+                        
+                        {/* Stripe Payment Element - Shows Card + UPI */}
+                        <div className="mb-6">
+                            <PaymentElement options={{ layout: 'tabs' }} />
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-6 text-sm text-secondary-600 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                            <p>Secure payment. Test mode – use card <code className="bg-blue-100 px-1 rounded">4242 4242 4242 4242</code></p>
+                        </div>
+
+                        <button
+                            onClick={handlePayment}
+                            disabled={processing || !stripe}
+                            className="w-full flex items-center justify-center gap-3 bg-primary-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-primary-700 transition-all transform hover:-translate-y-1 shadow-lg shadow-primary-900/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
+                        >
+                            {processing ? (
+                                <>
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    Processing Payment...
+                                </>
+                            ) : (
+                                <>
+                                    <Lock className="h-5 w-5" />
+                                    Pay ₹{summary.amount} Securely
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+export default function Checkout() {
+    const [summary, setSummary] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [clientSecret, setClientSecret] = useState(null);
+    const [shippingAddress, setShippingAddress] = useState({
+        fullName: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: ''
+    });
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const initCheckout = async () => {
+            try {
+                const summaryRes = await checkoutAPI.summary();
+                setSummary(summaryRes.data);
+            } catch (error) {
+                console.error('Failed to init checkout', error);
+                toast.error('Failed to load checkout');
+                navigate('/cart');
+            } finally {
+                setLoading(false);
+            }
+        };
+        initCheckout();
+    }, [navigate]);
+
+    // Create PaymentIntent when address is filled
+    useEffect(() => {
+        const createPaymentIntent = async () => {
+            if (!shippingAddress.fullName || !shippingAddress.addressLine1 || !shippingAddress.city || 
+                !shippingAddress.state || !shippingAddress.postalCode || !shippingAddress.country) {
+                return;
+            }
+
+            try {
+                const { data } = await api.post('/create-payment-intent', { shippingAddress });
+                setClientSecret(data.clientSecret);
+            } catch (error) {
+                console.error('Failed to create payment intent', error);
+                toast.error('Failed to initialize payment');
+            }
+        };
+
+        const debounceTimer = setTimeout(createPaymentIntent, 500);
+        return () => clearTimeout(debounceTimer);
+    }, [shippingAddress]);
 
     if (loading) {
         return (
@@ -161,6 +308,14 @@ const CheckoutContent = () => {
 
     if (!summary) return null;
 
+    const appearance = {
+        theme: 'stripe',
+        variables: {
+            colorPrimary: '#6366f1',
+            borderRadius: '12px',
+        },
+    };
+
     return (
         <div className="max-w-3xl mx-auto px-4 py-12">
             <div className="text-center mb-12">
@@ -171,267 +326,154 @@ const CheckoutContent = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Shipping Address Form */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="bg-white rounded-3xl shadow-xl border border-secondary-100 p-8"
-                >
-                    <h2 className="text-xl font-bold text-secondary-900 mb-6">Shipping Address</h2>
-                    <form className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-secondary-700 mb-1">Full Name</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="John Doe"
-                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                value={shippingAddress.fullName}
-                                onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 1</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="123 Main Street"
-                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                value={shippingAddress.addressLine1}
-                                onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 2 (Optional)</label>
-                            <input
-                                type="text"
-                                placeholder="Apartment, suite, etc."
-                                className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                value={shippingAddress.addressLine2}
-                                onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+            {clientSecret ? (
+                <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
+                    <CheckoutForm 
+                        summary={summary} 
+                        shippingAddress={shippingAddress}
+                        setShippingAddress={setShippingAddress}
+                    />
+                </Elements>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Address Form before payment is ready */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="bg-white rounded-3xl shadow-xl border border-secondary-100 p-8"
+                    >
+                        <h2 className="text-xl font-bold text-secondary-900 mb-2">Shipping Address</h2>
+                        <p className="text-secondary-500 text-sm mb-6">Fill in your address to proceed to payment</p>
+                        <form className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-secondary-700 mb-1">City</label>
+                                <label className="block text-sm font-medium text-secondary-700 mb-1">Full Name</label>
                                 <input
                                     type="text"
                                     required
-                                    placeholder="New Delhi"
+                                    placeholder="John Doe"
                                     className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    value={shippingAddress.city}
-                                    onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                                    value={shippingAddress.fullName}
+                                    onChange={(e) => setShippingAddress({ ...shippingAddress, fullName: e.target.value })}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-secondary-700 mb-1">State</label>
+                                <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 1</label>
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Delhi"
+                                    placeholder="123 Main Street"
                                     className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    value={shippingAddress.state}
-                                    onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                                    value={shippingAddress.addressLine1}
+                                    onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine1: e.target.value })}
                                 />
                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-secondary-700 mb-1">Postal Code</label>
+                                <label className="block text-sm font-medium text-secondary-700 mb-1">Address Line 2 (Optional)</label>
                                 <input
                                     type="text"
-                                    required
-                                    placeholder={
-                                        shippingAddress.country === 'India' ? 'e.g., 110001' :
-                                            shippingAddress.country === 'United States' ? 'e.g., 12345' :
-                                                shippingAddress.country === 'United Kingdom' ? 'e.g., SW1A 1AA' :
-                                                    shippingAddress.country === 'Canada' ? 'e.g., K1A 0B1' :
-                                                        'Enter postal code'
-                                    }
+                                    placeholder="Apartment, suite, etc."
                                     className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    value={shippingAddress.postalCode}
-                                    onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
+                                    value={shippingAddress.addressLine2}
+                                    onChange={(e) => setShippingAddress({ ...shippingAddress, addressLine2: e.target.value })}
                                 />
-                                {shippingAddress.country && (
-                                    <p className="text-xs text-secondary-500 mt-1">
-                                        {shippingAddress.country === 'India' && 'Format: 6 digits (e.g., 110001)'}
-                                        {shippingAddress.country === 'United States' && 'Format: 5 or 9 digits (e.g., 12345 or 12345-6789)'}
-                                        {shippingAddress.country === 'United Kingdom' && 'Format: UK postcode (e.g., SW1A 1AA)'}
-                                        {shippingAddress.country === 'Canada' && 'Format: A1A 1A1'}
-                                        {shippingAddress.country === 'Australia' && 'Format: 4 digits (e.g., 2000)'}
-                                        {!['India', 'United States', 'United Kingdom', 'Canada', 'Australia'].includes(shippingAddress.country) && 'Enter valid postal code for your country'}
-                                    </p>
-                                )}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-secondary-700 mb-1">Country</label>
-                                <select
-                                    required
-                                    className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                                    value={shippingAddress.country}
-                                    onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
-                                >
-                                    <option value="">Select Country</option>
-                                    <option value="India">India</option>
-                                    <option value="United States">United States</option>
-                                    <option value="United Kingdom">United Kingdom</option>
-                                    <option value="Canada">Canada</option>
-                                    <option value="Australia">Australia</option>
-                                    <option value="Germany">Germany</option>
-                                    <option value="France">France</option>
-                                    <option value="Japan">Japan</option>
-                                    <option value="China">China</option>
-                                    <option value="Brazil">Brazil</option>
-                                    <option value="Mexico">Mexico</option>
-                                    <option value="Singapore">Singapore</option>
-                                    <option value="UAE">United Arab Emirates</option>
-                                    <option value="Saudi Arabia">Saudi Arabia</option>
-                                    <option value="South Africa">South Africa</option>
-                                </select>
-                            </div>
-                        </div>
-                    </form>
-                </motion.div>
-
-                {/* Order Summary & Payment */}
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="space-y-8"
-                >
-                    <div className="bg-white rounded-3xl shadow-xl border border-secondary-100 overflow-hidden">
-                        <div className="p-8 border-b border-secondary-100 bg-secondary-50/50">
-                            <h2 className="text-xl font-bold text-secondary-900 mb-6">Order Summary</h2>
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center text-secondary-600">
-                                    <span>Total Items</span>
-                                    <span className="font-medium text-secondary-900">{summary.totalItems}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-secondary-600">
-                                    <span>Subtotal</span>
-                                    <span className="font-medium text-secondary-900">₹{summary.amount}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-secondary-600">
-                                    <span>Shipping</span>
-                                    <span className="text-green-600 font-medium">Free</span>
-                                </div>
-                                <div className="pt-6 border-t border-secondary-200 flex justify-between items-center">
-                                    <span className="text-xl font-bold text-secondary-900">Total Amount</span>
-                                    <span className="text-3xl font-bold text-primary-600">₹{summary.amount}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="p-8">
-                            <h3 className="text-lg font-bold text-secondary-900 mb-6">Payment Method</h3>
-
-                            {/* Card Number */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-secondary-700 mb-2">Card Number</label>
-                                <div className="relative">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400">
-                                        <CreditCard className="h-5 w-5" />
-                                    </div>
-                                    <div className="bg-white border border-secondary-200 rounded-xl py-3.5 pl-12 pr-4 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all">
-                                        <CardNumberElement options={{
-                                            style: {
-                                                base: {
-                                                    fontSize: '16px',
-                                                    color: '#1a1a1a',
-                                                    '::placeholder': { color: '#9ca3af' },
-                                                },
-                                                invalid: { color: '#dc2626' },
-                                            },
-                                            showIcon: true,
-                                        }} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Expiry & CVC Row */}
-                            <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-secondary-700 mb-2">Expiry Date</label>
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400">
-                                            <Calendar className="h-5 w-5" />
-                                        </div>
-                                        <div className="bg-white border border-secondary-200 rounded-xl py-3.5 pl-12 pr-4 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all">
-                                            <CardExpiryElement options={{
-                                                style: {
-                                                    base: {
-                                                        fontSize: '16px',
-                                                        color: '#1a1a1a',
-                                                        '::placeholder': { color: '#9ca3af' },
-                                                    },
-                                                    invalid: { color: '#dc2626' },
-                                                },
-                                            }} />
-                                        </div>
-                                    </div>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">City</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="New Delhi"
+                                        className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        value={shippingAddress.city}
+                                        onChange={(e) => setShippingAddress({ ...shippingAddress, city: e.target.value })}
+                                    />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-secondary-700 mb-2">CVC</label>
-                                    <div className="relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary-400">
-                                            <KeyRound className="h-5 w-5" />
-                                        </div>
-                                        <div className="bg-white border border-secondary-200 rounded-xl py-3.5 pl-12 pr-4 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent transition-all">
-                                            <CardCvcElement options={{
-                                                style: {
-                                                    base: {
-                                                        fontSize: '16px',
-                                                        color: '#1a1a1a',
-                                                        '::placeholder': { color: '#9ca3af' },
-                                                    },
-                                                    invalid: { color: '#dc2626' },
-                                                },
-                                            }} />
-                                        </div>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">State</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Delhi"
+                                        className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        value={shippingAddress.state}
+                                        onChange={(e) => setShippingAddress({ ...shippingAddress, state: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">Postal Code</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="110001"
+                                        className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        value={shippingAddress.postalCode}
+                                        onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-secondary-700 mb-1">Country</label>
+                                    <select
+                                        required
+                                        className="w-full px-4 py-2 border border-secondary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                                        value={shippingAddress.country}
+                                        onChange={(e) => setShippingAddress({ ...shippingAddress, country: e.target.value })}
+                                    >
+                                        <option value="">Select Country</option>
+                                        <option value="India">India</option>
+                                        <option value="United States">United States</option>
+                                        <option value="United Kingdom">United Kingdom</option>
+                                        <option value="Canada">Canada</option>
+                                        <option value="Australia">Australia</option>
+                                        <option value="Germany">Germany</option>
+                                        <option value="France">France</option>
+                                        <option value="Japan">Japan</option>
+                                        <option value="Singapore">Singapore</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </motion.div>
+
+                    {/* Order Summary */}
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                    >
+                        <div className="bg-white rounded-3xl shadow-xl border border-secondary-100 overflow-hidden">
+                            <div className="p-8 border-b border-secondary-100 bg-secondary-50/50">
+                                <h2 className="text-xl font-bold text-secondary-900 mb-6">Order Summary</h2>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center text-secondary-600">
+                                        <span>Total Items</span>
+                                        <span className="font-medium text-secondary-900">{summary.totalItems}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-secondary-600">
+                                        <span>Subtotal</span>
+                                        <span className="font-medium text-secondary-900">₹{summary.amount}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-secondary-600">
+                                        <span>Shipping</span>
+                                        <span className="text-green-600 font-medium">Free</span>
+                                    </div>
+                                    <div className="pt-6 border-t border-secondary-200 flex justify-between items-center">
+                                        <span className="text-xl font-bold text-secondary-900">Total Amount</span>
+                                        <span className="text-3xl font-bold text-primary-600">₹{summary.amount}</span>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Accepted Cards */}
-                            <div className="flex items-center gap-2 mb-6">
-                                <span className="text-xs text-secondary-500">Accepted:</span>
-                                <div className="flex gap-1">
-                                    <div className="w-10 h-6 bg-[#1a1f71] rounded flex items-center justify-center text-white text-xs font-bold">VISA</div>
-                                    <div className="w-10 h-6 bg-gradient-to-r from-[#eb001b] to-[#f79e1b] rounded flex items-center justify-center">
-                                        <div className="w-3 h-3 bg-[#eb001b] rounded-full opacity-80"></div>
-                                        <div className="w-3 h-3 bg-[#f79e1b] rounded-full -ml-1 opacity-80"></div>
-                                    </div>
-                                    <div className="w-10 h-6 bg-[#016fd0] rounded flex items-center justify-center text-white text-[7px] font-bold">AMEX</div>
+                            <div className="p-8">
+                                <div className="text-center text-secondary-500 py-8">
+                                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary-600" />
+                                    <p>Complete shipping address to load payment options</p>
                                 </div>
                             </div>
-
-                            <div className="flex items-center gap-3 mb-8 text-sm text-secondary-600 bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                                <p>This is a secure dummy payment environment. No actual money will be deducted from your account.</p>
-                            </div>
-
-                            <button
-                                onClick={handlePayment}
-                                disabled={processing || !stripe}
-                                className="w-full flex items-center justify-center gap-3 bg-primary-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-primary-700 transition-all transform hover:-translate-y-1 shadow-lg shadow-primary-900/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
-                            >
-                                {processing ? (
-                                    <>
-                                        <Loader2 className="h-6 w-6 animate-spin" />
-                                        Processing Payment...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Lock className="h-5 w-5" />
-                                        Pay ₹{summary.amount} Securely
-                                    </>
-                                )}
-                            </button>
                         </div>
-                    </div>
-                </motion.div>
-            </div>
+                    </motion.div>
+                </div>
+            )}
 
             <div className="mt-8 text-center">
                 <button
@@ -442,13 +484,5 @@ const CheckoutContent = () => {
                 </button>
             </div>
         </div>
-    );
-};
-
-export default function Checkout() {
-    return (
-        <Elements stripe={stripePromise}>
-            <CheckoutContent />
-        </Elements>
     );
 }
