@@ -88,7 +88,7 @@ async function viewProductsById(req, res, next) {
 
     const product = await getProductById(id);
 
-    await setCache(key, foundProduct, 60);
+    await setCache(key, product, 60);
 
     return res.json({
       message: "Product Found Successfully!",
