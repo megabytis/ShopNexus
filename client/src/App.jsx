@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/layout/ProtectedRoute';
+import AdminRoute from './components/layout/AdminRoute';
+import AdminLayout from './components/layout/AdminLayout';
 
-// Pages
+// Customer Pages
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import Home from './pages/shop/Home';
@@ -12,7 +14,14 @@ import Checkout from './pages/shop/Checkout';
 import Orders from './pages/user/Orders';
 import OrderDetail from './pages/user/OrderDetail';
 import OrderSuccess from './pages/shop/OrderSuccess';
+
+// Admin Pages
+import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/Dashboard';
+import ProductsList from './pages/admin/ProductsList';
+import ProductForm from './pages/admin/ProductForm';
+import OrdersList from './pages/admin/OrdersList';
+import AdminOrderDetail from './pages/admin/OrderDetail';
 
 function App() {
     return (
@@ -22,7 +31,10 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
 
-                {/* Main Layout Routes */}
+                {/* Admin Login - Standalone */}
+                <Route path="/admin/login" element={<AdminLogin />} />
+
+                {/* Customer Layout Routes */}
                 <Route element={<Layout />}>
                     <Route path="/" element={<Home />} />
                     <Route path="products/:id" element={<ProductDetail />} />
@@ -49,13 +61,21 @@ function App() {
                             <OrderSuccess />
                         </ProtectedRoute>
                     } />
+                </Route>
 
-                    {/* Protected Admin Routes */}
-                    <Route path="admin/*" element={
-                        <ProtectedRoute requireAdmin>
-                            <AdminDashboard />
-                        </ProtectedRoute>
-                    } />
+                {/* Admin Panel - Protected Routes with Admin Layout */}
+                <Route path="/admin" element={
+                    <AdminRoute>
+                        <AdminLayout />
+                    </AdminRoute>
+                }>
+                    <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                    <Route path="dashboard" element={<AdminDashboard />} />
+                    <Route path="products" element={<ProductsList />} />
+                    <Route path="products/new" element={<ProductForm />} />
+                    <Route path="products/:id" element={<ProductForm />} />
+                    <Route path="orders" element={<OrdersList />} />
+                    <Route path="orders/:id" element={<AdminOrderDetail />} />
                 </Route>
 
                 {/* Catch all */}

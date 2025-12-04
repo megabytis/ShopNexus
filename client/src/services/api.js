@@ -111,6 +111,29 @@ export const authAPI = {
   logout: () => api.post("/auth/logout"),
 };
 
+// Admin-specific auth
+export const adminAuthAPI = {
+  login: (data) => api.post("/admin/auth/login", data),
+  logout: () => api.post("/admin/auth/logout"),
+};
+
+// Admin product management
+export const adminProductsAPI = {
+  getAll: (params) => api.get("/admin/products", { params }),
+  getOne: (id) => api.get(`/admin/products/${id}`),
+  create: (data) => api.post("/admin/products", data),
+  update: (id, data) => api.put(`/admin/products/${id}`, data),
+  delete: (id) => api.delete(`/admin/products/${id}`),
+};
+
+// Admin order management
+export const adminOrdersAPI = {
+  getAll: (params) => api.get("/admin/orders", { params }),
+  getOne: (orderId) => api.get(`/admin/orders/${orderId}`),
+  updateStatus: (orderId, data) => api.patch(`/admin/orders/${orderId}/status`, data),
+};
+
+// Customer-facing APIs
 export const productsAPI = {
   getAll: (params) => api.get("/products", { params }),
   getOne: (id) => api.get(`/products/${id}`),
