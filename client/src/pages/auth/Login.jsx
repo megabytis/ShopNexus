@@ -32,7 +32,7 @@ export default function Login() {
   const onSubmit = async (data) => {
     try {
       const res = await authAPI.login(data);
-      login(res.data.userData, res.data.accessToken);
+      login(res.data.user || res.data.userData, res.data.accessToken);
       toast.success("Welcome back!");
       navigate(from, { replace: true });
     } catch (error) {

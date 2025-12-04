@@ -15,6 +15,7 @@ const checkoutRouter = require("./src/routers/checkout");
 const orderRouter = require("./src/routers/orders");
 const paymentRouter = require("./src/routers/payment");
 const adminRouter = require("./src/routers/admin/adminProducts");
+const adminAuthRouter = require("./src/routers/admin/adminAuth");
 
 const { webhook } = require("./src/controllers/paymentController");
 const adminOrders = require("./src/routers/admin/adminOrders");
@@ -60,6 +61,7 @@ app.use("/", cartRouter);
 app.use("/", checkoutRouter);
 app.use("/", orderRouter);
 app.use("/", paymentRouter);
+app.use("/admin/auth", adminAuthRouter);
 app.use("/admin/products", adminRouter);
 app.use("/admin/orders", adminOrders);
 

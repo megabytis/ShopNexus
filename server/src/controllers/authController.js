@@ -88,10 +88,11 @@ async function login(req, res, next) {
       return res.json({
         message: "Successfully Logged-in",
         accessToken,
-        userData: {
+        user: {
           _id: foundUser._id,
           name: foundUser.name,
           email: foundUser.email,
+          role: foundUser.role,
         },
       });
     } else {
@@ -217,6 +218,7 @@ function self(req, res) {
       _id: req.user._id,
       name: req.user.name,
       email: req.user.email,
+      role: req.user.role,
     },
   });
 }
