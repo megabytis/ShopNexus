@@ -136,6 +136,8 @@ async function getProductById(productId) {
   if (!foundProduct) {
     throw new Error("Invalid Product ID!");
   }
+
+  return foundProduct;
 }
 
 async function updateProduct(productId, updatedData) {
@@ -149,7 +151,7 @@ async function updateProduct(productId, updatedData) {
 
   // Checking if another product already has this title
   const existingProduct = await productModel.findOne({ title }).lean();
-  if (existingProduct && existingProduct._id.toString() !== id) {
+  if (existingProduct && existingProduct._id.toString() !== productId.toString()) {
     throw new Error("Duplicate Title not Allowed!");
   }
 
@@ -180,7 +182,13 @@ async function deleteProduct(productId) {
   }
   validateMongoID(productId);
 
-  const foundProduct = await productModel.findByIdAndDelete(id);
+  const foundProduct = await productModel.findByIdAndDelete(productId);
+
+  if (!foundProduct) {
+    throw new Error("Product not found!");
+  }
+
+  return foundProduct;
 }
 
 module.exports = {

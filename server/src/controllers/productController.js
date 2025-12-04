@@ -1,5 +1,6 @@
 const { buildKey } = require("../utils/keyGenerator");
 const { getCache, setCache, removeCache } = require("../utils/cache");
+const { validateProductsData } = require("../utils/validate");
 const {
   createProduct,
   getProducts,
@@ -101,7 +102,8 @@ async function viewProductsById(req, res, next) {
 
 async function updateProductsById(req, res, next) {
   try {
-    const product = await updateProduct(req.params.id, req.body);
+    const { id } = req.params;
+    const product = await updateProduct(id, req.body);
 
     await removeCache(buildKey("product:details", { id }));
 
