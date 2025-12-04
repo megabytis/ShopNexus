@@ -13,7 +13,7 @@ const createPaymentIntent = async (req, res, next) => {
       return res.status(400).json({ message: "Shipping address is required" });
     }
 
-    // 1. Get Cart Total (Secure calculation)
+    // 1. Getting Cart Total (Secure calculation)
     const cartData = await getCart(user._id);
     if (!cartData.cart || cartData.cart.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
@@ -26,7 +26,7 @@ const createPaymentIntent = async (req, res, next) => {
         return res.status(400).json({ message: "Order amount too low" });
     }
 
-    // 2. Create Order with status 'pending' (or 'processing' but paymentStatus 'pending')
+    // 2. Creating Order with status 'pending' (or 'processing' but paymentStatus 'pending')
     // The order schema defaults paymentStatus to 'pending'.
     // We need to map cart items to order items schema
     const orderItems = cartData.cart.map(item => ({
@@ -46,7 +46,7 @@ const createPaymentIntent = async (req, res, next) => {
 
     await newOrder.save();
 
-    // 3. Create Stripe PaymentIntent
+    // 3. Creating Stripe PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInPaise,
       currency: "inr",
@@ -81,7 +81,7 @@ const webhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle the event
+  // Handling the event
   switch (event.type) {
     case "payment_intent.succeeded":
       const paymentIntent = event.data.object;
@@ -89,13 +89,13 @@ const webhook = async (req, res) => {
 
       console.log(`PaymentIntent was successful for Order ${orderId}!`);
 
-      // Update Order Status
+      // Updating Order Status
       if (orderId) {
           await orderModel.findByIdAndUpdate(orderId, {
               paymentStatus: 'paid'
           });
 
-          // Clear User Cart
+          // Clearing User Cart
           if (userId) {
               const user = await userModel.findById(userId);
               if (user) {
@@ -118,7 +118,6 @@ const webhook = async (req, res) => {
       console.log(`Unhandled event type ${event.type}`);
   }
 
-  // Return a 200 response to acknowledge receipt of the event
   res.send();
 };
 
