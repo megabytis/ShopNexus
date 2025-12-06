@@ -17,7 +17,7 @@ export default function DemoAdminAccess() {
                         <h2 className="text-3xl font-display font-bold text-secondary-900">Demo Admin Access</h2>
                     </div>
                     <p className="text-secondary-500 max-w-xl mx-auto">
-                        For recruiters, interviewers, and reviewers: explore the full Admin Panel functionality using the credentials below.
+                        Explore the full Admin Panel functionality using the credentials below.
                     </p>
                 </div>
 
@@ -30,10 +30,10 @@ export default function DemoAdminAccess() {
                                 Demo Credentials
                             </h3>
                             <div className="space-y-3 text-sm">
-                                <div className="bg-secondary-50 rounded-lg p-3 border border-secondary-100">
+                                {/* <div className="bg-secondary-50 rounded-lg p-3 border border-secondary-100">
                                     <span className="text-secondary-500 block text-xs uppercase tracking-wide mb-1">Admin Login URL</span>
                                     <code className="text-secondary-800 font-mono text-xs break-all">{adminUrl}</code>
-                                </div>
+                                </div> */}
                                 <div className="bg-secondary-50 rounded-lg p-3 border border-secondary-100">
                                     <span className="text-secondary-500 block text-xs uppercase tracking-wide mb-1">Email</span>
                                     <code className="text-secondary-800 font-mono">{demoEmail}</code>
