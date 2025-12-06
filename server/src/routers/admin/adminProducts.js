@@ -8,6 +8,10 @@ const {
   updateProductsById,
   deleteProductById,
 } = require("../../controllers/productController");
+const upload = require("../../middleware/upload");
+const {
+  uploadProductImage,
+} = require("../../controllers/adminProductController");
 
 /*
 POST   /admin/products         -> create product
@@ -25,5 +29,12 @@ adminRouter.get("/", userAuth, authorize("admin"), viewProducts);
 adminRouter.get("/:id", userAuth, authorize("admin"), viewProductsById);
 adminRouter.put("/:id", userAuth, authorize("admin"), updateProductsById);
 adminRouter.delete("/:id", userAuth, authorize("admin"), deleteProductById);
+adminRouter.post(
+  "/upload-image",
+  userAuth,
+  authorize("admin"),
+  upload.single("image"),
+  uploadProductImage
+);
 
 module.exports = adminRouter;
