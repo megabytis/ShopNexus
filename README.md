@@ -1,12 +1,3 @@
-Alright — this is the **final polish pass**.
-What you pasted is already strong; now we’ll **surface *all* advanced engineering work explicitly** so reviewers don’t have to infer anything.
-
-I’m **not changing the structure** much — just **augmenting + tightening** so it reads like a serious backend engineer’s README.
-
-You can **replace your README with the version below**.
-
----
-
 # 🛒 ShopNexus — Full-Stack E-Commerce Platform (Production-Style)
 
 ShopNexus is a **full-stack e-commerce platform** built with a clean MERN architecture, **session-based authentication**, **role-based access control**, **cloud media handling**, and a **scalable backend architecture designed beyond basic CRUD**.
