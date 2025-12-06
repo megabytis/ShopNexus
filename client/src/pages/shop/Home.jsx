@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { productsAPI, categoriesAPI } from '../../services/api';
 import ProductCard from '../../components/features/ProductCard';
+import DemoAdminAccess from '../../components/common/DemoAdminAccess';
 import { Loader2, Search, Filter, X, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import clsx from 'clsx';
@@ -297,6 +298,9 @@ export default function Home() {
                     </div>
                 </div>
             </div>
+
+            {/* Demo Admin Access Section */}
+            <DemoAdminAccess />
         </div>
     );
 }
