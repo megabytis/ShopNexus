@@ -124,6 +124,10 @@ export const adminProductsAPI = {
   create: (data) => api.post("/admin/products", data),
   update: (id, data) => api.put(`/admin/products/${id}`, data),
   delete: (id) => api.delete(`/admin/products/${id}`),
+  uploadImage: (data) =>
+    api.post("/admin/products/upload-image", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
 };
 
 // Admin order management

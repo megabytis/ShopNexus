@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { adminProductsAPI, categoriesAPI } from '../../services/api';
-import { Loader2, ArrowLeft, Save } from 'lucide-react';
+import { Loader2, ArrowLeft, Save, Upload, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ProductForm() {
@@ -11,6 +11,7 @@ export default function ProductForm() {
 
     const [loading, setLoading] = useState(isEditing);
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
@@ -31,7 +32,7 @@ export default function ProductForm() {
     const fetchCategories = async () => {
         try {
             const response = await categoriesAPI.getAll();
-            setCategories(response.data.categories || []);
+            setCategories(response.data.data || []);
         } catch (error) {
             console.error('Failed to fetch categories:', error);
         }
@@ -94,6 +95,31 @@ export default function ProductForm() {
             ...formData,
             [e.target.name]: e.target.value
         });
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploading(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', file);
+
+        try {
+            const response = await adminProductsAPI.uploadImage(uploadFormData);
+            setFormData(prev => ({
+                ...prev,
+                image: response.data.imageUrl
+            }));
+            toast.success('Image uploaded successfully');
+        } catch (error) {
+            console.error('Failed to upload image:', error);
+            toast.error('Failed to upload image');
+        } finally {
+            setUploading(false);
+            // Reset input value to allow selecting same file again if needed
+            e.target.value = '';
+        }
     };
 
     if (loading) {
@@ -213,32 +239,79 @@ export default function ProductForm() {
                     </select>
                 </div>
 
-                {/* Image URL */}
+                {/* Image Upload */}
                 <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Image URL
+                        Product Image
                     </label>
-                    <input
-                        type="url"
-                        name="image"
-                        value={formData.image}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        placeholder="https://example.com/image.jpg"
-                    />
-                    {formData.image && (
-                        <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2">Preview:</p>
-                            <img 
-                                src={formData.image} 
-                                alt="Product preview"
-                                className="w-full h-48 object-cover rounded-xl border border-gray-200"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                }}
-                            />
-                        </div>
-                    )}
+                    
+                    <div className="space-y-4">
+                        {/* Image Preview */}
+                        {formData.image ? (
+                            <div className="relative w-full h-64 bg-gray-50 rounded-xl border border-gray-200 overflow-hidden group">
+                                <img 
+                                    src={formData.image} 
+                                    alt="Product preview"
+                                    className="w-full h-full object-contain"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                                    <label className="cursor-pointer p-3 bg-white rounded-full hover:bg-gray-100 transition-colors shadow-lg">
+                                        <Upload className="w-5 h-5 text-gray-700" />
+                                        <input 
+                                            type="file" 
+                                            className="hidden" 
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            disabled={uploading}
+                                        />
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, image: '' })}
+                                        className="p-3 bg-white rounded-full hover:bg-red-50 text-red-600 transition-colors shadow-lg"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <label className={`
+                                flex flex-col items-center justify-center w-full h-64 
+                                border-2 border-dashed border-gray-300 rounded-xl 
+                                cursor-pointer hover:bg-gray-50 hover:border-purple-500 
+                                transition-all duration-200 group
+                                ${uploading ? 'opacity-50 cursor-not-allowed' : ''}
+                            `}>
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    {uploading ? (
+                                        <>
+                                            <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-3" />
+                                            <p className="text-sm text-gray-500">Uploading image...</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="p-4 bg-purple-50 rounded-full mb-3 group-hover:scale-110 transition-transform duration-200">
+                                                <Upload className="w-8 h-8 text-purple-600" />
+                                            </div>
+                                            <p className="mb-2 text-sm text-gray-700 font-medium">
+                                                Click to upload product image
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                SVG, PNG, JPG or GIF (max. 5MB)
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                                <input 
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    disabled={uploading}
+                                />
+                            </label>
+                        )}
+                    </div>
                 </div>
 
                 {/* Actions */}
@@ -252,7 +325,7 @@ export default function ProductForm() {
                     </button>
                     <button
                         type="submit"
-                        disabled={saving}
+                        disabled={saving || uploading}
                         className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/30 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     >
                         {saving ? (
